@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Batch Downloader</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root{
+    --bg:#f7f7f5; --panel:#ffffff; --border:#e4e2dd; --text:#1f1e1c; --muted:#6b6862;
+    --accent:#b45309; --accent-hover:#92400e; --accent-bg:#fef3e8;
+    --ok:#2f7a4f; --ok-bg:#eaf6ee; --bad:#b3261e; --bad-bg:#fdecea;
+    --chip:#efece5; --chip-active:#1f1e1c; --chip-active-text:#ffffff;
+    --radius:10px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);min-height:100vh;}
+  .wrap{max-width:960px;margin:0 auto;padding:32px 20px 80px;}
+  h1{font-size:1.5rem;margin:0 0 4px;}
+  .sub{color:var(--muted);margin:0 0 28px;font-size:0.95rem;line-height:1.5;}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:20px;}
+  .drop{
+    border:2px dashed var(--border);border-radius:var(--radius);padding:36px 20px;text-align:center;
+    cursor:pointer;transition:border-color .15s, background .15s;
+  }
+  .drop:hover, .drop.drag{border-color:var(--accent);background:var(--accent-bg);}
+  .drop input{display:none;}
+  .drop .icon{font-size:2rem;margin-bottom:8px;}
+  .drop .hint{color:var(--muted);font-size:0.85rem;margin-top:4px;}
+  .filename{font-size:0.85rem;color:var(--muted);margin-top:10px;}
+
+  .mapbar{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;margin-bottom:4px;}
+  .field{display:flex;flex-direction:column;gap:5px;min-width:170px;}
+  .field label{font-size:0.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em;}
+  .field select, .field input[type=number]{
+    padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:0.88rem;background:var(--bg);color:var(--text);
+  }
+  .field input[type=number]{width:100px;}
+  .field .fieldhint{font-size:0.72rem;color:var(--muted);}
+
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:18px 0 16px;}
+  .search{
+    flex:1 1 200px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.9rem;background:var(--bg);
+  }
+  .chip{
+    padding:7px 14px;border-radius:999px;background:var(--chip);border:1px solid var(--border);
+    font-size:0.85rem;cursor:pointer;white-space:nowrap;color:var(--text);user-select:none;
+  }
+  .chip.active{background:var(--chip-active);color:var(--chip-active-text);border-color:var(--chip-active);}
+  .chip .count{opacity:0.65;margin-left:4px;}
+
+  .rowbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:0.85rem;color:var(--muted);}
+  .rowbar a{color:var(--accent);cursor:pointer;text-decoration:none;font-weight:600;}
+  .rowbar a:hover{text-decoration:underline;}
+
+  table{width:100%;border-collapse:collapse;font-size:0.88rem;}
+  thead th{
+    text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);color:var(--muted);
+    font-weight:600;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.03em;
+  }
+  tbody td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tbody tr:hover{background:#faf9f7;}
+  tbody tr.excluded{opacity:0.4;}
+  .ttitle{font-weight:500;}
+  .turl{color:var(--muted);font-size:0.78rem;word-break:break-all;max-width:320px;display:block;}
+  .badge{
+    display:inline-block;padding:2px 8px;border-radius:999px;font-size:0.72rem;font-weight:600;
+  }
+  .badge.domain{background:var(--chip);color:var(--text);}
+  .badge.direct{background:var(--ok-bg);color:var(--ok);}
+  .badge.manual{background:var(--bad-bg);color:var(--bad);}
+  input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--accent);}
+
+  .tablewrap{max-height:440px;overflow:auto;border:1px solid var(--border);border-radius:8px;}
+  .tablewrap table{margin:0;}
+  .tablewrap thead{position:sticky;top:0;background:var(--panel);z-index:1;}
+
+  .empty{padding:40px 20px;text-align:center;color:var(--muted);}
+
+  .actionbar{display:flex;justify-content:space-between;align-items:center;margin-top:18px;gap:16px;flex-wrap:wrap;}
+  .selected-count{font-size:0.9rem;color:var(--muted);}
+  .selected-count b{color:var(--text);}
+  .zipsize{display:flex;align-items:center;gap:8px;font-size:0.85rem;color:var(--muted);}
+  .zipsize input{width:76px;padding:7px 9px;border:1px solid var(--border);border-radius:8px;font-size:0.88rem;background:var(--bg);color:var(--text);}
+  button.primary{
+    background:var(--accent);color:#fff;border:none;padding:11px 22px;border-radius:8px;
+    font-size:0.9rem;font-weight:600;cursor:pointer;transition:background .15s;
+  }
+  button.primary:hover:not(:disabled){background:var(--accent-hover);}
+  button.primary:disabled{background:#d8d4cc;cursor:not-allowed;}
+
+  .progress-wrap{margin-top:16px;display:none;}
+  .progress-wrap.show{display:block;}
+  .progress-bar{height:8px;background:var(--chip);border-radius:999px;overflow:hidden;}
+  .progress-fill{height:100%;background:var(--accent);width:0%;transition:width .2s;}
+  .progress-label{font-size:0.82rem;color:var(--muted);margin-top:6px;}
+
+  .results{margin-top:18px;display:none;}
+  .results.show{display:block;}
+  .result-stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+  .stat{
+    flex:1 1 140px;border-radius:8px;padding:12px 14px;border:1px solid var(--border);
+  }
+  .stat .n{font-size:1.4rem;font-weight:700;}
+  .stat.okstat{background:var(--ok-bg);}
+  .stat.okstat .n{color:var(--ok);}
+  .stat.badstat{background:var(--bad-bg);}
+  .stat.badstat .n{color:var(--bad);}
+  .stat .l{font-size:0.78rem;color:var(--muted);}
+  .note{font-size:0.82rem;color:var(--muted);line-height:1.5;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:10px;}
+  .note code{background:var(--chip);padding:1px 5px;border-radius:4px;font-size:0.78rem;}
+
+  .log{
+    margin-top:10px;max-height:200px;overflow-y:auto;font-size:0.76rem;background:var(--bg);
+    border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-family:Consolas,Menlo,monospace;
+  }
+  .log div{padding:1px 0;}
+  .log .ok{color:var(--ok);}
+  .log .fail{color:var(--bad);}
+  .log .proxy{color:#8a5a00;}
+  button.secondary{
+    background:var(--chip);color:var(--text);border:1px solid var(--border);padding:11px 18px;border-radius:8px;
+    font-size:0.9rem;font-weight:600;cursor:pointer;
+  }
+
+  footer{text-align:center;color:var(--muted);font-size:0.78rem;margin-top:30px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Image Batch Downloader</h1>
+  <p class="sub">Upload a spreadsheet with a title column and an image/link URL column — any header names work, you pick which columns to use. Choose how many images go in each ZIP, pick which rows you want, grouped by domain, and download. Runs in this browser tab — direct image fetches never leave it; a link that's blocked by CORS is retried through a public unlocking proxy, which does see that one URL (nothing else about your file).</p>
+
+  <div class="panel">
+    <div class="drop" id="drop">
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+      <div class="icon">📄</div>
+      <div><strong>Click to choose a file</strong> or drag it here</div>
+      <div class="hint">.xlsx, .xls, or .csv — any columns, you'll map them next</div>
+      <div class="filename" id="filename"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="tablePanel" style="display:none;">
+    <div class="mapbar">
+      <div class="field">
+        <label for="titleCol">Title column</label>
+        <select id="titleCol"></select>
+      </div>
+      <div class="field">
+        <label for="urlCol">Image URL column</label>
+        <select id="urlCol"></select>
+      </div>
+      <div class="field">
+        <label for="zipSizeInput">Items per ZIP</label>
+        <input type="number" id="zipSizeInput" min="1" max="2000" value="150">
+        <span class="fieldhint">Splits large selections into multiple ZIPs</span>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input class="search" id="search" type="text" placeholder="Filter by title or URL…">
+      <div id="domainChips" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+    <div class="rowbar">
+      <span id="rowCount"></span>
+      <span><a id="selAll">Select all shown</a> &nbsp;·&nbsp; <a id="selNone">Select none</a></span>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:34px;"></th>
+            <th>Title</th>
+            <th style="width:120px;">Domain</th>
+            <th style="width:110px;">Type</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="actionbar">
+      <div class="selected-count"><b id="selCount">0</b> of <span id="totalCount">0</span> selected</div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button class="secondary" id="cancelBtn" style="display:none;">Cancel</button>
+        <button class="primary" id="downloadBtn" disabled>Download ZIP of selected</button>
+      </div>
+    </div>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-label" id="progressLabel"></div>
+      <div class="log" id="log"></div>
+    </div>
+
+    <div class="results" id="results">
+      <div class="result-stats">
+        <div class="stat okstat"><div class="n" id="okN">0</div><div class="l">Images downloaded</div></div>
+        <div class="stat badstat"><div class="n" id="badN">0</div><div class="l">Couldn't fetch directly</div></div>
+      </div>
+      <div class="note" id="failNote" style="display:none;"></div>
+    </div>
+  </div>
+
+  <footer>Everything happens locally in your browser — the file never leaves your machine.</footer>
+</div>
+
+<script>
+(function(){
+  let sheetJson = [];   // raw parsed rows, as objects keyed by header
+  let headers = [];
+  let rows = [];        // {title, url, domain, direct, selected}
+  let activeDomain = 'all';
+
+  const dropEl = document.getElementById('drop');
+  const fileInput = document.getElementById('fileInput');
+  const filenameEl = document.getElementById('filename');
+  const tablePanel = document.getElementById('tablePanel');
+  const tbody = document.getElementById('tbody');
+  const domainChips = document.getElementById('domainChips');
+  const searchEl = document.getElementById('search');
+  const rowCountEl = document.getElementById('rowCount');
+  const selAllEl = document.getElementById('selAll');
+  const selNoneEl = document.getElementById('selNone');
+  const selCountEl = document.getElementById('selCount');
+  const totalCountEl = document.getElementById('totalCount');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const progressWrap = document.getElementById('progressWrap');
+  const progressFill = document.getElementById('progressFill');
+  const progressLabel = document.getElementById('progressLabel');
+  const logEl = document.getElementById('log');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const resultsEl = document.getElementById('results');
+  const okNEl = document.getElementById('okN');
+  const badNEl = document.getElementById('badN');
+  const failNote = document.getElementById('failNote');
+  const titleColEl = document.getElementById('titleCol');
+  const urlColEl = document.getElementById('urlCol');
+  const zipSizeInput = document.getElementById('zipSizeInput');
+  let cancelled = false;
+
+  function logLine(text, cls){
+    const div = document.createElement('div');
+    if (cls) div.className = cls;
+    div.textContent = text;
+    logEl.appendChild(div);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  // ---------- file handling ----------
+  dropEl.addEventListener('click', () => fileInput.click());
+  dropEl.addEventListener('dragover', e => { e.preventDefault(); dropEl.classList.add('drag'); });
+  dropEl.addEventListener('dragleave', () => dropEl.classList.remove('drag'));
+  dropEl.addEventListener('drop', e => {
+    e.preventDefault(); dropEl.classList.remove('drag');
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', e => {
+    if (e.target.files.length) handleFile(e.target.files[0]);
+  });
+
+  function handleFile(file){
+    filenameEl.textContent = 'Loaded: ' + file.name;
+    const reader = new FileReader();
+    reader.onload = function(evt){
+      try{
+        const data = new Uint8Array(evt.target.result);
+        const wb = XLSX.read(data, {type:'array'});
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(sheet, {defval:''});
+        if (!json.length || !Object.keys(json[0]).length){
+          alert('No usable rows found in that file.');
+          return;
+        }
+        sheetJson = json;
+        headers = Object.keys(json[0]);
+        populateColumnPickers();
+        applyColumnMapping();
+        tablePanel.style.display = 'block';
+        resultsEl.classList.remove('show');
+        progressWrap.classList.remove('show');
+      } catch(err){
+        alert('Could not read that file: ' + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function guessTitleKey(){ return headers.find(h => /title|name|product/i.test(h)) || headers[0]; }
+  function guessUrlKey(){
+    return headers.find(h => /url|link|image/i.test(h)) || headers.find(h => h !== guessTitleKey()) || headers[0];
+  }
+
+  function populateColumnPickers(){
+    const titleGuess = guessTitleKey();
+    const urlGuess = guessUrlKey();
+    titleColEl.innerHTML = headers.map(h => `<option value="${escapeAttr(h)}">${escapeHtml(h)}</option>`).join('');
+    urlColEl.innerHTML = headers.map(h => `<option value="${escapeAttr(h)}">${escapeHtml(h)}</option>`).join('');
+    titleColEl.value = titleGuess;
+    urlColEl.value = urlGuess;
+  }
+
+  titleColEl.addEventListener('change', applyColumnMapping);
+  urlColEl.addEventListener('change', applyColumnMapping);
+
+  function applyColumnMapping(){
+    rows = parseRows(sheetJson, titleColEl.value, urlColEl.value);
+    activeDomain = 'all';
+    if (!rows.length){
+      buildDomainChips();
+      renderTable();
+      return;
+    }
+    buildDomainChips();
+    renderTable();
+  }
+
+  function parseRows(json, titleKey, urlKey){
+    const out = [];
+    json.forEach(r => {
+      const url = (r[urlKey] || '').toString().trim();
+      const title = (r[titleKey] || '').toString().trim();
+      if (!url || !/^https?:\/\//i.test(url)) return;
+      let domain = 'other';
+      try { domain = simplifyDomain(new URL(url).hostname); } catch(e){}
+      const direct = /\.(jpe?g|png|gif|webp|svg|bmp|avif)(\?|#|$)/i.test(url);
+      out.push({title: title || url, url, domain, direct, selected: true});
+    });
+    return out;
+  }
+
+  function simplifyDomain(host){
+    host = host.replace(/^www\./,'').replace(/^assets\./,'');
+    const parts = host.split('.');
+    if (parts.length <= 2) return host;
+    const twoLetterCc = /^[a-z]{2}$/i;
+    // handle things like co.uk, com.au
+    if (parts.length >= 3 && twoLetterCc.test(parts[parts.length-1]) && /^(co|com|net|org)$/i.test(parts[parts.length-2])){
+      return parts.slice(-3).join('.');
+    }
+    return parts.slice(-2).join('.');
+  }
+
+  // ---------- domain chips ----------
+  function buildDomainChips(){
+    const counts = {};
+    rows.forEach(r => counts[r.domain] = (counts[r.domain]||0) + 1);
+    const domains = Object.keys(counts).sort((a,b) => counts[b]-counts[a]);
+
+    domainChips.innerHTML = '';
+    const allChip = makeChip('all', 'All', rows.length);
+    domainChips.appendChild(allChip);
+    domains.forEach(d => domainChips.appendChild(makeChip(d, d, counts[d])));
+    updateChipStyles();
+  }
+
+  function makeChip(key, label, count){
+    const el = document.createElement('div');
+    el.className = 'chip';
+    el.dataset.domain = key;
+    el.innerHTML = label + '<span class="count">' + count + '</span>';
+    el.addEventListener('click', () => { activeDomain = key; updateChipStyles(); renderTable(); });
+    return el;
+  }
+  function updateChipStyles(){
+    [...domainChips.children].forEach(c => c.classList.toggle('active', c.dataset.domain === activeDomain));
+  }
+
+  searchEl.addEventListener('input', renderTable);
+
+  // ---------- table ----------
+  function visibleRows(){
+    const q = searchEl.value.trim().toLowerCase();
+    return rows.filter(r => {
+      if (activeDomain !== 'all' && r.domain !== activeDomain) return false;
+      if (q && !r.title.toLowerCase().includes(q) && !r.url.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }
+
+  function renderTable(){
+    const vis = visibleRows();
+    tbody.innerHTML = '';
+    if (!vis.length){
+      tbody.innerHTML = '<tr><td colspan="4" class="empty">No rows match. Check the column mapping above if this looks wrong.</td></tr>';
+    }
+    vis.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="checkbox" ${r.selected ? 'checked' : ''}></td>
+        <td><div class="ttitle">${escapeHtml(r.title)}</div><span class="turl">${escapeHtml(r.url)}</span></td>
+        <td><span class="badge domain">${escapeHtml(r.domain)}</span></td>
+        <td>${r.direct ? '<span class="badge direct">image file</span>' : '<span class="badge manual">page link</span>'}</td>
+      `;
+      const cb = tr.querySelector('input');
+      cb.addEventListener('change', () => { r.selected = cb.checked; updateCounts(); });
+      tbody.appendChild(tr);
+    });
+    rowCountEl.textContent = vis.length + ' row' + (vis.length===1?'':'s') + ' shown';
+    updateCounts();
+  }
+
+  selAllEl.addEventListener('click', () => { visibleRows().forEach(r => r.selected = true); renderTable(); });
+  selNoneEl.addEventListener('click', () => { visibleRows().forEach(r => r.selected = false); renderTable(); });
+
+  function updateCounts(){
+    const selected = rows.filter(r => r.selected).length;
+    selCountEl.textContent = selected;
+    totalCountEl.textContent = rows.length;
+    downloadBtn.disabled = selected === 0;
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function escapeAttr(s){ return escapeHtml(s); }
+
+  // ---------- download / zip ----------
+  downloadBtn.addEventListener('click', runDownload);
+  cancelBtn.addEventListener('click', () => { cancelled = true; logLine('Cancelling…', 'fail'); });
+
+  const FETCH_TIMEOUT_MS = 15000;
+
+  function getZipSize(){
+    const n = parseInt(zipSizeInput.value, 10);
+    if (!Number.isFinite(n) || n < 1) return 150;
+    return Math.min(n, 2000);
+  }
+
+  // Most image hosts (nintendo.com, amazon.com, etc.) don't send
+  // Access-Control-Allow-Origin, so a direct browser fetch() is blocked
+  // from reading the bytes no matter where this page is hosted. We try
+  // a direct fetch first, and only fall back to a CORS-unlocking proxy
+  // (which re-serves the same bytes with permissive CORS headers) if
+  // that fails. Page links (like Amazon product pages) will still fail
+  // here since the proxy just returns HTML, not an image — those land
+  // in the manual-download list either way, as expected.
+  // wsrv.nl is a dedicated image-proxying service (always sends
+  // Access-Control-Allow-Origin: *) so it's first; the general-purpose
+  // CORS unblockers are fallbacks since they're more prone to rate-limits
+  // or blocking requests from a file:// ("null") origin like this page.
+  const PROXIES = [
+    url => 'https://wsrv.nl/?url=' + encodeURIComponent(url),
+    url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+    url => 'https://corsproxy.io/?url=' + encodeURIComponent(url)
+  ];
+
+  async function fetchWithTimeout(url){
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      return await fetch(url, {mode:'cors', cache:'no-store', signal: controller.signal});
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  async function fetchImage(url){
+    try {
+      const res = await fetchWithTimeout(url);
+      const ctype = (res.headers.get('content-type') || '').toLowerCase();
+      if (res.ok && ctype.startsWith('image/')) return {res, ctype, viaProxy:false};
+    } catch(e){ /* fall through to proxies */ }
+
+    for (const buildProxyUrl of PROXIES){
+      try {
+        const res = await fetchWithTimeout(buildProxyUrl(url));
+        const ctype = (res.headers.get('content-type') || '').toLowerCase();
+        if (res.ok && ctype.startsWith('image/')) return {res, ctype, viaProxy:true};
+      } catch(e){ /* try next proxy */ }
+    }
+    throw new Error('could not fetch as an image (blocked, timed out, or not an image response)');
+  }
+
+  async function runDownload(){
+    const selected = rows.filter(r => r.selected);
+    if (!selected.length) return;
+
+    const maxPerZip = getZipSize();
+    cancelled = false;
+    downloadBtn.disabled = true;
+    cancelBtn.style.display = 'inline-block';
+    progressWrap.classList.add('show');
+    resultsEl.classList.remove('show');
+    progressFill.style.width = '0%';
+    logEl.innerHTML = '';
+
+    let ok = 0, bad = 0, proxied = 0;
+    const failures = [];
+    const okItems = []; // {folder, name, blob}
+    const CONCURRENCY = 5;
+    let idx = 0;
+
+    async function worker(){
+      while (idx < selected.length){
+        if (cancelled) return;
+        const i = idx++;
+        const item = selected[i];
+        try {
+          const {res, ctype, viaProxy} = await fetchImage(item.url);
+          const blob = await res.blob();
+          if (!blob || blob.size === 0) throw new Error('empty response body');
+          const ext = extFromContentType(ctype) || extFromUrl(item.url) || 'jpg';
+          const name = sanitize(item.title) + '.' + ext;
+          okItems.push({folder: item.domain, name, blob});
+          ok++;
+          if (viaProxy){ proxied++; logLine('OK (via proxy)  ' + item.title, 'proxy'); }
+          else logLine('OK   ' + item.title, 'ok');
+        } catch(err){
+          bad++;
+          failures.push(item);
+          logLine('FAIL ' + item.title + '  —  ' + err.message, 'fail');
+        }
+        progressLabel.textContent = `${Math.min(idx, selected.length)} of ${selected.length} processed`;
+        progressFill.style.width = Math.round((Math.min(idx, selected.length)/selected.length)*100) + '%';
+      }
+    }
+
+    const workers = [];
+    for (let w=0; w<Math.min(CONCURRENCY, selected.length); w++) workers.push(worker());
+    await Promise.all(workers);
+
+    if (cancelled){
+      logLine('Stopped — ' + ok + ' image(s) fetched before cancelling were not zipped.', 'fail');
+      progressWrap.classList.remove('show');
+      cancelBtn.style.display = 'none';
+      downloadBtn.disabled = false;
+      return;
+    }
+
+    // Build one or more zips, capped at the user's chosen items-per-zip, so a
+    // large selection doesn't force one huge generateAsync() call.
+    const chunkCount = Math.max(1, Math.ceil(okItems.length / maxPerZip));
+    for (let c = 0; c < chunkCount; c++){
+      const chunk = okItems.slice(c*maxPerZip, (c+1)*maxPerZip);
+      const zip = new JSZip();
+      const used = {};
+      chunk.forEach(it => {
+        const name = uniqueName(used, it.folder, it.name);
+        zip.file(it.folder + '/' + name, it.blob);
+      });
+      if (c === chunkCount - 1 && failures.length){
+        let manifest = 'Items that could not be fetched directly as image files (often product pages,\n';
+        manifest += 'or the host blocks cross-origin downloads even via proxy). Open these links manually to save the photo:\n\n';
+        failures.forEach(f => { manifest += f.title + '\n' + f.url + '\n\n'; });
+        zip.file('_manual-download-needed.txt', manifest);
+      }
+      progressLabel.textContent = chunkCount > 1 ? `Zipping batch ${c+1} of ${chunkCount}…` : 'Zipping…';
+      const content = await zip.generateAsync({type:'blob'});
+      const filename = chunkCount > 1 ? `images_batch_${c+1}_of_${chunkCount}.zip` : 'images.zip';
+      triggerDownload(content, filename);
+      logLine('Downloaded ' + filename + ' (' + Object.keys(zip.files).length + ' file(s))', 'ok');
+    }
+
+    progressWrap.classList.remove('show');
+    cancelBtn.style.display = 'none';
+    resultsEl.classList.add('show');
+    okNEl.textContent = ok;
+    badNEl.textContent = bad;
+    const notes = [];
+    if (proxied) notes.push(`${proxied} image${proxied===1?'':'s'} needed a CORS-unlocking proxy to fetch (that's normal for hosts like nintendo.com that don't allow direct cross-origin downloads) — that request was visible to the proxy service.`);
+    if (bad) notes.push(`${bad} link${bad===1?'':'s'} couldn't be fetched automatically — usually because it's a store product page rather than a direct image file, or it timed out. Their titles and links are listed in <code>_manual-download-needed.txt</code> inside the ZIP so you can grab them by hand.`);
+    if (notes.length){
+      failNote.style.display = 'block';
+      failNote.innerHTML = notes.join('<br><br>');
+    } else {
+      failNote.style.display = 'none';
+    }
+    downloadBtn.disabled = false;
+  }
+
+  function extFromContentType(ctype){
+    const map = {'image/jpeg':'jpg','image/png':'png','image/gif':'gif','image/webp':'webp','image/svg+xml':'svg','image/bmp':'bmp','image/avif':'avif'};
+    return map[ctype.split(';')[0].trim()];
+  }
+  function extFromUrl(url){
+    const m = url.match(/\.([a-z0-9]{2,4})(\?|#|$)/i);
+    return m ? m[1].toLowerCase() : null;
+  }
+  function sanitize(name){
+    return name.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g,' ').trim().slice(0,120) || 'image';
+  }
+  function uniqueName(used, folder, name){
+    const key = folder + '/' + name;
+    if (!used[key]){ used[key] = 1; return name; }
+    const dot = name.lastIndexOf('.');
+    const base = dot > -1 ? name.slice(0,dot) : name;
+    const ext = dot > -1 ? name.slice(dot) : '';
+    let n = used[key] + 1;
+    let candidate;
+    do { candidate = `${base} (${n})${ext}`; n++; } while (used[folder + '/' + candidate]);
+    used[key]++;
+    used[folder + '/' + candidate] = 1;
+    return candidate;
+  }
+  function triggerDownload(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+})();
+</script>
+</body>
+</html>
