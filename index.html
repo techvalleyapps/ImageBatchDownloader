@@ -11,8 +11,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   :root{
-    --bg:#f4f5f8; --bg-grad-a:#eef1fb; --bg-grad-b:#f7f4fb;
-    --panel:#ffffff; --panel-2:#fbfbfe; --border:#e6e7ef; --border-soft:#eef0f6;
+    --bg:#ffffff;
+    --panel:#ffffff; --panel-2:#f7f7f9; --border:#e6e7ef; --border-soft:#eef0f6;
     --text:#171923; --muted:#6b7085; --muted-soft:#9497a8;
     --accent:#6d5bf5; --accent-2:#a855f7; --accent-hover:#5b48e8; --accent-bg:#f1eefe; --accent-ring:rgba(109,91,245,0.18);
     --ok:#0f9d63; --ok-bg:#e7f8ef; --bad:#e0393e; --bad-bg:#fdecec; --warn:#b9770e;
@@ -26,7 +26,7 @@
   }
   @media (prefers-color-scheme: dark){
     :root{
-      --bg:#0e0f14; --bg-grad-a:#161327; --bg-grad-b:#0e0f14;
+      --bg:#0e0f14;
       --panel:#181a23; --panel-2:#1e2029; --border:#2a2d3a; --border-soft:#23252f;
       --text:#f1f2f6; --muted:#9296ab; --muted-soft:#6d7086;
       --accent:#8b7bff; --accent-2:#c084fc; --accent-hover:#a294ff; --accent-bg:#221f3d; --accent-ring:rgba(139,123,255,0.28);
@@ -40,11 +40,7 @@
   *{box-sizing:border-box;}
   body{
     margin:0;color:var(--text);min-height:100vh;
-    background:
-      radial-gradient(900px 500px at 15% -10%, var(--bg-grad-a), transparent 60%),
-      radial-gradient(700px 500px at 100% 0%, var(--bg-grad-b), transparent 55%),
-      var(--bg);
-    background-attachment:fixed;
+    background:var(--bg);
     -webkit-font-smoothing:antialiased;
   }
   .wrap{max-width:900px;margin:0 auto;padding:48px 20px 90px;}
