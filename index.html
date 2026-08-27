@@ -495,15 +495,22 @@
   // that fails. Page links (like Amazon product pages) will still fail
   // here since the proxy just returns HTML, not an image — those land
   // in the manual-download list either way, as expected.
-  // wsrv.nl is a dedicated image-proxying service (always sends
-  // Access-Control-Allow-Origin: *) so it's first; the general-purpose
-  // CORS unblockers are fallbacks since they're more prone to rate-limits
-  // or blocking requests from a file:// ("null") origin like this page.
+  // wsrv.nl and codetabs are dedicated proxying services (send permissive
+  // CORS headers and generally aren't rate-limited) so they're tried first;
+  // allorigins/corsproxy are general-purpose fallbacks that are more prone
+  // to rate-limiting or being blocked outright by anti-hotlinking CDNs
+  // (some retailers, e.g. B&H Photo, block requests from ALL known public
+  // proxies — those links will still land in the manual-download list).
+  // Each proxy gets one quick retry on a 403/429 (rate-limit) response,
+  // since those are often transient rather than a hard block.
   const PROXIES = [
     url => 'https://wsrv.nl/?url=' + encodeURIComponent(url),
+    url => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url),
     url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
     url => 'https://corsproxy.io/?url=' + encodeURIComponent(url)
   ];
+
+  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
   async function fetchWithTimeout(url){
     const controller = new AbortController();
@@ -523,11 +530,18 @@
     } catch(e){ /* fall through to proxies */ }
 
     for (const buildProxyUrl of PROXIES){
-      try {
-        const res = await fetchWithTimeout(buildProxyUrl(url));
-        const ctype = (res.headers.get('content-type') || '').toLowerCase();
-        if (res.ok && ctype.startsWith('image/')) return {res, ctype, viaProxy:true};
-      } catch(e){ /* try next proxy */ }
+      for (let attempt = 0; attempt < 2; attempt++){
+        try {
+          const res = await fetchWithTimeout(buildProxyUrl(url));
+          const ctype = (res.headers.get('content-type') || '').toLowerCase();
+          if (res.ok && ctype.startsWith('image/')) return {res, ctype, viaProxy:true};
+          if (attempt === 0 && (res.status === 403 || res.status === 429)){
+            await sleep(600 + Math.random() * 500);
+            continue;
+          }
+          break;
+        } catch(e){ break; /* network/CORS error on this proxy, try next */ }
+      }
     }
     throw new Error('could not fetch as an image (blocked, timed out, or not an image response)');
   }
@@ -548,10 +562,11 @@
     let ok = 0, bad = 0, proxied = 0;
     const failures = [];
     const okItems = []; // {folder, name, blob}
-    const CONCURRENCY = 5;
+    const CONCURRENCY = 4;
     let idx = 0;
 
-    async function worker(){
+    async function worker(startDelay){
+      if (startDelay) await sleep(startDelay);
       while (idx < selected.length){
         if (cancelled) return;
         const i = idx++;
@@ -577,7 +592,7 @@
     }
 
     const workers = [];
-    for (let w=0; w<Math.min(CONCURRENCY, selected.length); w++) workers.push(worker());
+    for (let w=0; w<Math.min(CONCURRENCY, selected.length); w++) workers.push(worker(w * 150));
     await Promise.all(workers);
 
     if (cancelled){
@@ -619,7 +634,7 @@
     badNEl.textContent = bad;
     const notes = [];
     if (proxied) notes.push(`${proxied} image${proxied===1?'':'s'} needed a CORS-unlocking proxy to fetch (that's normal for hosts like nintendo.com that don't allow direct cross-origin downloads) — that request was visible to the proxy service.`);
-    if (bad) notes.push(`${bad} link${bad===1?'':'s'} couldn't be fetched automatically — usually because it's a store product page rather than a direct image file, or it timed out. Their titles and links are listed in <code>_manual-download-needed.txt</code> inside the ZIP so you can grab them by hand.`);
+    if (bad) notes.push(`${bad} link${bad===1?'':'s'} couldn't be fetched automatically — usually because it's a store product page rather than a direct image file, it timed out, or the host (some retailers, e.g. B&amp;H Photo) actively blocks every public CORS proxy this tool can try. Their titles and links are listed in <code>_manual-download-needed.txt</code> inside the ZIP so you can grab them by hand.`);
     if (notes.length){
       failNote.style.display = 'block';
       failNote.innerHTML = notes.join('<br><br>');
