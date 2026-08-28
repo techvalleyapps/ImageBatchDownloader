@@ -7,19 +7,15 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   :root{
     --bg:#ffffff;
     --panel:#ffffff; --panel-2:#f7f7f9; --border:#e6e7ef; --border-soft:#eef0f6;
     --text:#171923; --muted:#6b7085; --muted-soft:#9497a8;
-    --accent:#6d5bf5; --accent-2:#a855f7; --accent-hover:#5b48e8; --accent-bg:#f1eefe; --accent-ring:rgba(109,91,245,0.18);
-    --ok:#0f9d63; --ok-bg:#e7f8ef; --bad:#e0393e; --bad-bg:#fdecec; --warn:#b9770e;
-    --chip:#f0f1f6; --chip-active:#171923; --chip-active-text:#ffffff;
+    --accent:#6d5bf5; --accent-2:#a855f7; --accent-bg:#f1eefe; --accent-ring:rgba(109,91,245,0.18);
+    --chip:#f0f1f6;
     --radius:16px; --radius-sm:10px;
     --shadow-sm:0 1px 2px rgba(23,25,35,0.04);
-    --shadow-md:0 10px 30px -12px rgba(23,25,35,0.16);
     --shadow-glow:0 8px 24px -8px var(--accent-ring);
     color-scheme:light;
     font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
@@ -29,159 +25,60 @@
       --bg:#0e0f14;
       --panel:#181a23; --panel-2:#1e2029; --border:#2a2d3a; --border-soft:#23252f;
       --text:#f1f2f6; --muted:#9296ab; --muted-soft:#6d7086;
-      --accent:#8b7bff; --accent-2:#c084fc; --accent-hover:#a294ff; --accent-bg:#221f3d; --accent-ring:rgba(139,123,255,0.28);
-      --ok:#34d399; --ok-bg:#0f2b22; --bad:#f87171; --bad-bg:#2f1618; --warn:#fbbf24;
-      --chip:#242631; --chip-active:#f1f2f6; --chip-active-text:#12131a;
-      --shadow-sm:0 1px 2px rgba(0,0,0,0.3);
-      --shadow-md:0 10px 30px -12px rgba(0,0,0,0.55);
+      --accent:#8b7bff; --accent-2:#c084fc; --accent-bg:#221f3d; --accent-ring:rgba(139,123,255,0.28);
+      --chip:#242631;
       color-scheme:dark;
     }
   }
   *{box-sizing:border-box;}
-  body{
-    margin:0;color:var(--text);min-height:100vh;
-    background:var(--bg);
-    -webkit-font-smoothing:antialiased;
-  }
-  .wrap{max-width:900px;margin:0 auto;padding:48px 20px 90px;}
+  body{margin:0;color:var(--text);min-height:100vh;background:var(--bg);-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:720px;margin:0 auto;padding:56px 20px 90px;}
 
   .hero{display:flex;align-items:center;gap:14px;margin-bottom:10px;}
   .hero-icon{
-    width:44px;height:44px;border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center;
-    font-size:1.3rem;color:#fff;background:linear-gradient(140deg,var(--accent),var(--accent-2));
+    width:48px;height:48px;border-radius:14px;flex:none;display:flex;align-items:center;justify-content:center;
+    font-size:1.4rem;color:#fff;background:linear-gradient(140deg,var(--accent),var(--accent-2));
     box-shadow:var(--shadow-glow);
   }
-  h1{font-size:1.6rem;font-weight:800;margin:0;letter-spacing:-0.02em;}
-  .sub{color:var(--muted);margin:14px 0 30px;font-size:0.96rem;line-height:1.6;max-width:66ch;}
+  h1{font-size:1.7rem;font-weight:800;margin:0;letter-spacing:-0.02em;}
+  .sub{color:var(--muted);margin:16px 0 32px;font-size:1rem;line-height:1.65;max-width:60ch;}
+  .sub b{color:var(--text);}
 
   .panel{
     background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
-    padding:24px;margin-bottom:20px;box-shadow:var(--shadow-sm);
+    padding:28px;margin-bottom:20px;box-shadow:var(--shadow-sm);
   }
 
-  .drop{
-    border:1.5px dashed var(--border);border-radius:var(--radius-sm);padding:44px 20px;text-align:center;
-    cursor:pointer;transition:border-color .18s ease, background .18s ease, transform .18s ease;
-    background:var(--panel-2);
+  .cta-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;}
+  a.btn-primary{
+    display:inline-flex;align-items:center;gap:8px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;text-decoration:none;
+    padding:13px 26px;border-radius:var(--radius-sm);font-size:0.95rem;font-weight:700;
+    box-shadow:var(--shadow-glow);transition:transform .12s ease;
   }
-  .drop:hover{border-color:var(--accent);background:var(--accent-bg);}
-  .drop.drag{border-color:var(--accent);background:var(--accent-bg);transform:scale(1.01);}
-  .drop input{display:none;}
-  .drop .icon{
-    width:52px;height:52px;margin:0 auto 14px;border-radius:14px;display:flex;align-items:center;justify-content:center;
-    font-size:1.5rem;background:linear-gradient(140deg,var(--accent-bg),var(--panel));border:1px solid var(--border-soft);
+  a.btn-primary:hover{transform:translateY(-1px);}
+  a.btn-secondary{
+    display:inline-flex;align-items:center;gap:6px;
+    background:var(--chip);color:var(--text);text-decoration:none;
+    padding:13px 22px;border-radius:var(--radius-sm);font-size:0.9rem;font-weight:600;
   }
-  .drop strong{font-weight:600;}
-  .drop .hint{color:var(--muted-soft);font-size:0.82rem;margin-top:6px;}
-  .filename{font-size:0.85rem;color:var(--accent);font-weight:600;margin-top:14px;}
+  a.btn-secondary:hover{background:var(--border);}
+  .cta-note{font-size:0.78rem;color:var(--muted-soft);margin-top:12px;}
+  .cta-note a{color:var(--accent);text-decoration:none;}
+  .cta-note a:hover{text-decoration:underline;}
 
-  .mapbar{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;margin-bottom:6px;}
-  .field{display:flex;flex-direction:column;gap:6px;min-width:170px;}
-  .field label{font-size:0.72rem;font-weight:700;color:var(--muted-soft);text-transform:uppercase;letter-spacing:0.05em;}
-  .field select, .field input[type=number]{
-    padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:0.88rem;
-    background:var(--panel-2);color:var(--text);font-family:inherit;transition:border-color .15s, box-shadow .15s;
-  }
-  .field select:focus, .field input[type=number]:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring);}
-  .field input[type=number]{width:100px;}
-  .field .fieldhint{font-size:0.72rem;color:var(--muted-soft);}
+  h2{font-size:1.05rem;margin:0 0 14px;}
+  ol{margin:0;padding-left:22px;color:var(--text);font-size:0.92rem;line-height:1.9;}
+  ol code{background:var(--chip);padding:2px 7px;border-radius:5px;font-size:0.82rem;font-family:'JetBrains Mono',Consolas,monospace;}
 
-  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:20px 0 16px;padding-top:20px;border-top:1px solid var(--border-soft);}
-  .search{
-    flex:1 1 200px;padding:10px 14px;border:1px solid var(--border);border-radius:999px;font-size:0.9rem;
-    background:var(--panel-2);color:var(--text);font-family:inherit;transition:border-color .15s, box-shadow .15s;
-  }
-  .search:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring);}
-  .chip{
-    padding:7px 14px;border-radius:999px;background:var(--chip);border:1px solid transparent;
-    font-size:0.83rem;font-weight:500;cursor:pointer;white-space:nowrap;color:var(--text);user-select:none;
-    transition:background .15s, color .15s, transform .1s;
-  }
-  .chip:hover{transform:translateY(-1px);}
-  .chip.active{background:var(--chip-active);color:var(--chip-active-text);}
-  .chip .count{opacity:0.6;margin-left:5px;}
-
-  .rowbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:0.83rem;color:var(--muted);}
-  .rowbar a{color:var(--accent);cursor:pointer;text-decoration:none;font-weight:600;}
-  .rowbar a:hover{text-decoration:underline;}
-
-  table{width:100%;border-collapse:collapse;font-size:0.87rem;}
-  thead th{
-    text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);color:var(--muted-soft);
-    font-weight:700;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em;
-  }
-  tbody td{padding:11px 12px;border-bottom:1px solid var(--border-soft);vertical-align:middle;}
-  tbody tr{transition:background .12s;}
-  tbody tr:hover{background:var(--panel-2);}
-  tbody tr.excluded{opacity:0.4;}
-  .ttitle{font-weight:500;}
-  .turl{color:var(--muted-soft);font-size:0.77rem;word-break:break-all;max-width:320px;display:block;margin-top:2px;}
-  .badge{
-    display:inline-block;padding:3px 9px;border-radius:999px;font-size:0.71rem;font-weight:600;
-  }
-  .badge.domain{background:var(--chip);color:var(--text);}
-  .badge.direct{background:var(--ok-bg);color:var(--ok);}
-  .badge.manual{background:var(--bad-bg);color:var(--bad);}
-  input[type=checkbox]{
-    width:17px;height:17px;cursor:pointer;accent-color:var(--accent);border-radius:4px;
-  }
-
-  .tablewrap{max-height:440px;overflow:auto;border:1px solid var(--border);border-radius:var(--radius-sm);}
-  .tablewrap table{margin:0;}
-  .tablewrap thead{position:sticky;top:0;background:var(--panel);z-index:1;}
-
-  .empty{padding:44px 20px;text-align:center;color:var(--muted-soft);}
-
-  .actionbar{display:flex;justify-content:space-between;align-items:center;margin-top:20px;gap:16px;flex-wrap:wrap;}
-  .selected-count{font-size:0.9rem;color:var(--muted);}
-  .selected-count b{color:var(--text);}
-  button.primary{
-    background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border:none;padding:12px 24px;border-radius:var(--radius-sm);
-    font-size:0.9rem;font-weight:700;cursor:pointer;transition:transform .12s ease, box-shadow .12s ease, opacity .12s;
-    box-shadow:var(--shadow-glow);font-family:inherit;
-  }
-  button.primary:hover:not(:disabled){transform:translateY(-1px);}
-  button.primary:active:not(:disabled){transform:translateY(0);}
-  button.primary:disabled{background:var(--chip);color:var(--muted-soft);box-shadow:none;cursor:not-allowed;}
-
-  .progress-wrap{margin-top:18px;display:none;}
-  .progress-wrap.show{display:block;}
-  .progress-bar{height:8px;background:var(--chip);border-radius:999px;overflow:hidden;}
-  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));width:0%;transition:width .2s;}
-  .progress-label{font-size:0.82rem;color:var(--muted);margin-top:8px;}
-
-  .results{margin-top:20px;display:none;}
-  .results.show{display:block;}
-  .result-stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
-  .stat{
-    flex:1 1 140px;border-radius:var(--radius-sm);padding:14px 16px;border:1px solid var(--border);background:var(--panel-2);
-  }
-  .stat .n{font-size:1.5rem;font-weight:800;letter-spacing:-0.02em;}
-  .stat.okstat{background:var(--ok-bg);border-color:transparent;}
-  .stat.okstat .n{color:var(--ok);}
-  .stat.badstat{background:var(--bad-bg);border-color:transparent;}
-  .stat.badstat .n{color:var(--bad);}
-  .stat .l{font-size:0.78rem;color:var(--muted);margin-top:2px;}
-  .note{font-size:0.82rem;color:var(--muted);line-height:1.55;background:var(--panel-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-top:10px;}
-  .note code{background:var(--chip);padding:1px 6px;border-radius:5px;font-size:0.78rem;font-family:'JetBrains Mono',Consolas,monospace;}
-  .manual-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}
-  .manual-actions button{padding:9px 16px;font-size:0.84rem;}
-
-  .log{
-    margin-top:10px;max-height:200px;overflow-y:auto;font-size:0.75rem;background:var(--panel-2);
-    border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-family:'JetBrains Mono',Consolas,Menlo,monospace;
-  }
-  .log div{padding:2px 0;}
-  .log .ok{color:var(--ok);}
-  .log .fail{color:var(--bad);}
-  .log .proxy{color:var(--warn);}
-  button.secondary{
-    background:var(--chip);color:var(--text);border:1px solid var(--border);padding:12px 20px;border-radius:var(--radius-sm);
-    font-size:0.9rem;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s;
-  }
-  button.secondary:hover{background:var(--border);}
+  .why{display:flex;flex-direction:column;gap:10px;}
+  .why-item{display:flex;gap:10px;font-size:0.9rem;color:var(--muted);line-height:1.6;}
+  .why-item b{color:var(--text);}
+  .why-item .dot{flex:none;width:6px;height:6px;border-radius:999px;background:var(--accent);margin-top:8px;}
 
   footer{text-align:center;color:var(--muted-soft);font-size:0.78rem;margin-top:36px;}
+  footer a{color:var(--accent);text-decoration:none;}
+  footer a:hover{text-decoration:underline;}
 </style>
 </head>
 <body>
@@ -190,613 +87,37 @@
     <div class="hero-icon">🖼️</div>
     <h1>Image Batch Downloader</h1>
   </div>
-  <p class="sub">Upload a spreadsheet with a title column and an image/link URL column — any header names work, you pick which columns to use. Choose how many images go in each ZIP, pick which rows you want, grouped by domain, and download. Runs in this browser tab — direct image fetches never leave it; a link that's blocked by CORS is retried through a public unlocking proxy, which does see that one URL (nothing else about your file).</p>
+  <p class="sub">Download images in bulk from a spreadsheet of titles and URLs, straight to a ZIP. <b>Now a Chrome extension</b> instead of a web page — fetches bypass CORS entirely, so there's no unlocking proxy in the loop and nothing that a host can block.</p>
 
   <div class="panel">
-    <div class="drop" id="drop">
-      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
-      <div class="icon">📄</div>
-      <div><strong>Click to choose a file</strong> or drag it here</div>
-      <div class="hint">.xlsx, .xls, or .csv — any columns, you'll map them next</div>
-      <div class="filename" id="filename"></div>
+    <div class="cta-row">
+      <a class="btn-primary" href="https://github.com/techvalleyapps/ImageBatchDownloader/releases/latest/download/ImageBatchDownloader.zip">⬇ Download for Chrome</a>
+      <a class="btn-secondary" href="https://github.com/techvalleyapps/ImageBatchDownloader#readme">View README</a>
+    </div>
+    <p class="cta-note">This link always fetches the current latest release. Prefer a signed <code>.crx</code>? <a href="https://github.com/techvalleyapps/ImageBatchDownloader/releases/latest/download/ImageBatchDownloader.crx">grab that instead</a>.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Install (30 seconds)</h2>
+    <ol>
+      <li>Download the ZIP above, then unzip it anywhere.</li>
+      <li>Open <code>chrome://extensions</code> in Chrome.</li>
+      <li>Turn on <b>Developer mode</b> (top-right toggle).</li>
+      <li>Click <b>Load unpacked</b> and select the unzipped folder.</li>
+    </ol>
+    <p class="cta-note">That's it — click the toolbar icon to open the tool. This manual install doesn't auto-update; the README covers an optional script for that if you want it.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Why an extension?</h2>
+    <div class="why">
+      <div class="why-item"><span class="dot"></span><span><b>No proxy needed.</b> A page-hosted version of this tool has to bounce blocked requests through a public CORS-unlocking proxy — which some hosts block outright. An extension with host permissions fetches cross-origin directly, no proxy, no blind spots.</span></div>
+      <div class="why-item"><span class="dot"></span><span><b>Nothing leaves your machine.</b> No proxy service ever sees a URL you're downloading.</span></div>
+      <div class="why-item"><span class="dot"></span><span><b>Not on the Chrome Web Store</b> — distributed straight from GitHub Releases instead.</span></div>
     </div>
   </div>
 
-  <div class="panel" id="tablePanel" style="display:none;">
-    <div class="mapbar">
-      <div class="field">
-        <label for="titleCol">Title column</label>
-        <select id="titleCol"></select>
-      </div>
-      <div class="field">
-        <label for="urlCol">Image URL column</label>
-        <select id="urlCol"></select>
-      </div>
-      <div class="field">
-        <label for="zipSizeInput">Items per ZIP</label>
-        <input type="number" id="zipSizeInput" min="1" max="2000" value="150">
-        <span class="fieldhint">Splits large selections into multiple ZIPs</span>
-      </div>
-    </div>
-
-    <div class="toolbar">
-      <input class="search" id="search" type="text" placeholder="Filter by title or URL…">
-      <div id="domainChips" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
-    </div>
-    <div class="rowbar">
-      <span id="rowCount"></span>
-      <span><a id="selAll">Select all shown</a> &nbsp;·&nbsp; <a id="selNone">Select none</a></span>
-    </div>
-    <div class="tablewrap">
-      <table>
-        <thead>
-          <tr>
-            <th style="width:34px;"></th>
-            <th>Title</th>
-            <th style="width:120px;">Domain</th>
-            <th style="width:110px;">Type</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
-    </div>
-
-    <div class="actionbar">
-      <div class="selected-count"><b id="selCount">0</b> of <span id="totalCount">0</span> selected</div>
-      <div style="display:flex;gap:10px;align-items:center;">
-        <button class="secondary" id="cancelBtn" style="display:none;">Cancel</button>
-        <button class="primary" id="downloadBtn" disabled>Download ZIP of selected</button>
-      </div>
-    </div>
-
-    <div class="progress-wrap" id="progressWrap">
-      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-      <div class="progress-label" id="progressLabel"></div>
-      <div class="log" id="log"></div>
-    </div>
-
-    <div class="results" id="results">
-      <div class="result-stats">
-        <div class="stat okstat"><div class="n" id="okN">0</div><div class="l">Images downloaded</div></div>
-        <div class="stat badstat"><div class="n" id="badN">0</div><div class="l">Couldn't fetch directly</div></div>
-      </div>
-      <div class="note" id="failNote" style="display:none;"></div>
-      <div class="manual-actions" id="manualActions" style="display:none;">
-        <button class="secondary" id="viewFailBtn" type="button">Open failed-links page ↗</button>
-        <button class="secondary" id="downloadCsvBtn" type="button">Download failed links as CSV</button>
-      </div>
-    </div>
-  </div>
-
-  <footer>Everything happens locally in your browser — the file never leaves your machine.</footer>
+  <footer>Source on <a href="https://github.com/techvalleyapps/ImageBatchDownloader">GitHub</a> — everything runs locally, nothing is uploaded anywhere.</footer>
 </div>
-
-<script>
-(function(){
-  let sheetJson = [];   // raw parsed rows, as objects keyed by header
-  let headers = [];
-  let rows = [];        // {title, url, domain, direct, selected}
-  let activeDomain = 'all';
-
-  const dropEl = document.getElementById('drop');
-  const fileInput = document.getElementById('fileInput');
-  const filenameEl = document.getElementById('filename');
-  const tablePanel = document.getElementById('tablePanel');
-  const tbody = document.getElementById('tbody');
-  const domainChips = document.getElementById('domainChips');
-  const searchEl = document.getElementById('search');
-  const rowCountEl = document.getElementById('rowCount');
-  const selAllEl = document.getElementById('selAll');
-  const selNoneEl = document.getElementById('selNone');
-  const selCountEl = document.getElementById('selCount');
-  const totalCountEl = document.getElementById('totalCount');
-  const downloadBtn = document.getElementById('downloadBtn');
-  const progressWrap = document.getElementById('progressWrap');
-  const progressFill = document.getElementById('progressFill');
-  const progressLabel = document.getElementById('progressLabel');
-  const logEl = document.getElementById('log');
-  const cancelBtn = document.getElementById('cancelBtn');
-  const resultsEl = document.getElementById('results');
-  const okNEl = document.getElementById('okN');
-  const badNEl = document.getElementById('badN');
-  const failNote = document.getElementById('failNote');
-  const manualActions = document.getElementById('manualActions');
-  const viewFailBtn = document.getElementById('viewFailBtn');
-  const downloadCsvBtn = document.getElementById('downloadCsvBtn');
-  const titleColEl = document.getElementById('titleCol');
-  const urlColEl = document.getElementById('urlCol');
-  const zipSizeInput = document.getElementById('zipSizeInput');
-  let cancelled = false;
-  let lastFailures = []; // items that couldn't be fetched on the most recent run
-
-  function logLine(text, cls){
-    const div = document.createElement('div');
-    if (cls) div.className = cls;
-    div.textContent = text;
-    logEl.appendChild(div);
-    logEl.scrollTop = logEl.scrollHeight;
-  }
-
-  // ---------- file handling ----------
-  dropEl.addEventListener('click', () => fileInput.click());
-  dropEl.addEventListener('dragover', e => { e.preventDefault(); dropEl.classList.add('drag'); });
-  dropEl.addEventListener('dragleave', () => dropEl.classList.remove('drag'));
-  dropEl.addEventListener('drop', e => {
-    e.preventDefault(); dropEl.classList.remove('drag');
-    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
-  });
-  fileInput.addEventListener('change', e => {
-    if (e.target.files.length) handleFile(e.target.files[0]);
-  });
-
-  function handleFile(file){
-    filenameEl.textContent = 'Loaded: ' + file.name;
-    const reader = new FileReader();
-    reader.onload = function(evt){
-      try{
-        const data = new Uint8Array(evt.target.result);
-        const wb = XLSX.read(data, {type:'array'});
-        const sheet = wb.Sheets[wb.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(sheet, {defval:''});
-        if (!json.length || !Object.keys(json[0]).length){
-          alert('No usable rows found in that file.');
-          return;
-        }
-        sheetJson = json;
-        headers = Object.keys(json[0]);
-        populateColumnPickers();
-        applyColumnMapping();
-        tablePanel.style.display = 'block';
-        resultsEl.classList.remove('show');
-        manualActions.style.display = 'none';
-        progressWrap.classList.remove('show');
-      } catch(err){
-        alert('Could not read that file: ' + err.message);
-      }
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  function guessTitleKey(){ return headers.find(h => /title|name|product/i.test(h)) || headers[0]; }
-  function guessUrlKey(){
-    return headers.find(h => /url|link|image/i.test(h)) || headers.find(h => h !== guessTitleKey()) || headers[0];
-  }
-
-  function populateColumnPickers(){
-    const titleGuess = guessTitleKey();
-    const urlGuess = guessUrlKey();
-    titleColEl.innerHTML = headers.map(h => `<option value="${escapeAttr(h)}">${escapeHtml(h)}</option>`).join('');
-    urlColEl.innerHTML = headers.map(h => `<option value="${escapeAttr(h)}">${escapeHtml(h)}</option>`).join('');
-    titleColEl.value = titleGuess;
-    urlColEl.value = urlGuess;
-  }
-
-  titleColEl.addEventListener('change', applyColumnMapping);
-  urlColEl.addEventListener('change', applyColumnMapping);
-
-  function applyColumnMapping(){
-    rows = parseRows(sheetJson, titleColEl.value, urlColEl.value);
-    activeDomain = 'all';
-    if (!rows.length){
-      buildDomainChips();
-      renderTable();
-      return;
-    }
-    buildDomainChips();
-    renderTable();
-  }
-
-  function parseRows(json, titleKey, urlKey){
-    const out = [];
-    json.forEach(r => {
-      const url = (r[urlKey] || '').toString().trim();
-      const title = (r[titleKey] || '').toString().trim();
-      if (!url || !/^https?:\/\//i.test(url)) return;
-      let domain = 'other';
-      try { domain = simplifyDomain(new URL(url).hostname); } catch(e){}
-      const direct = /\.(jpe?g|png|gif|webp|svg|bmp|avif)(\?|#|$)/i.test(url);
-      out.push({title: title || url, url, domain, direct, selected: true});
-    });
-    return out;
-  }
-
-  function simplifyDomain(host){
-    host = host.replace(/^www\./,'').replace(/^assets\./,'');
-    const parts = host.split('.');
-    if (parts.length <= 2) return host;
-    const twoLetterCc = /^[a-z]{2}$/i;
-    // handle things like co.uk, com.au
-    if (parts.length >= 3 && twoLetterCc.test(parts[parts.length-1]) && /^(co|com|net|org)$/i.test(parts[parts.length-2])){
-      return parts.slice(-3).join('.');
-    }
-    return parts.slice(-2).join('.');
-  }
-
-  // ---------- domain chips ----------
-  function buildDomainChips(){
-    const counts = {};
-    rows.forEach(r => counts[r.domain] = (counts[r.domain]||0) + 1);
-    const domains = Object.keys(counts).sort((a,b) => counts[b]-counts[a]);
-
-    domainChips.innerHTML = '';
-    const allChip = makeChip('all', 'All', rows.length);
-    domainChips.appendChild(allChip);
-    domains.forEach(d => domainChips.appendChild(makeChip(d, d, counts[d])));
-    updateChipStyles();
-  }
-
-  function makeChip(key, label, count){
-    const el = document.createElement('div');
-    el.className = 'chip';
-    el.dataset.domain = key;
-    el.innerHTML = label + '<span class="count">' + count + '</span>';
-    el.addEventListener('click', () => { activeDomain = key; updateChipStyles(); renderTable(); });
-    return el;
-  }
-  function updateChipStyles(){
-    [...domainChips.children].forEach(c => c.classList.toggle('active', c.dataset.domain === activeDomain));
-  }
-
-  searchEl.addEventListener('input', renderTable);
-
-  // ---------- table ----------
-  function visibleRows(){
-    const q = searchEl.value.trim().toLowerCase();
-    return rows.filter(r => {
-      if (activeDomain !== 'all' && r.domain !== activeDomain) return false;
-      if (q && !r.title.toLowerCase().includes(q) && !r.url.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }
-
-  function renderTable(){
-    const vis = visibleRows();
-    tbody.innerHTML = '';
-    if (!vis.length){
-      tbody.innerHTML = '<tr><td colspan="4" class="empty">No rows match. Check the column mapping above if this looks wrong.</td></tr>';
-    }
-    vis.forEach(r => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><input type="checkbox" ${r.selected ? 'checked' : ''}></td>
-        <td><div class="ttitle">${escapeHtml(r.title)}</div><span class="turl">${escapeHtml(r.url)}</span></td>
-        <td><span class="badge domain">${escapeHtml(r.domain)}</span></td>
-        <td>${r.direct ? '<span class="badge direct">image file</span>' : '<span class="badge manual">page link</span>'}</td>
-      `;
-      const cb = tr.querySelector('input');
-      cb.addEventListener('change', () => { r.selected = cb.checked; updateCounts(); });
-      tbody.appendChild(tr);
-    });
-    rowCountEl.textContent = vis.length + ' row' + (vis.length===1?'':'s') + ' shown';
-    updateCounts();
-  }
-
-  selAllEl.addEventListener('click', () => { visibleRows().forEach(r => r.selected = true); renderTable(); });
-  selNoneEl.addEventListener('click', () => { visibleRows().forEach(r => r.selected = false); renderTable(); });
-
-  function updateCounts(){
-    const selected = rows.filter(r => r.selected).length;
-    selCountEl.textContent = selected;
-    totalCountEl.textContent = rows.length;
-    downloadBtn.disabled = selected === 0;
-  }
-
-  function escapeHtml(s){
-    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-  function escapeAttr(s){ return escapeHtml(s); }
-
-  // ---------- download / zip ----------
-  downloadBtn.addEventListener('click', runDownload);
-  cancelBtn.addEventListener('click', () => { cancelled = true; logLine('Cancelling…', 'fail'); });
-  viewFailBtn.addEventListener('click', () => {
-    if (!lastFailures.length) return;
-    const blob = new Blob([buildManualHtml(lastFailures)], {type:'text/html'});
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank', 'noopener');
-    setTimeout(() => URL.revokeObjectURL(url), 15000);
-  });
-  downloadCsvBtn.addEventListener('click', () => {
-    if (!lastFailures.length) return;
-    const blob = new Blob([buildManualCsv(lastFailures)], {type:'text/csv'});
-    triggerDownload(blob, 'failed-links.csv');
-  });
-
-  const FETCH_TIMEOUT_MS = 15000;
-
-  function getZipSize(){
-    const n = parseInt(zipSizeInput.value, 10);
-    if (!Number.isFinite(n) || n < 1) return 150;
-    return Math.min(n, 2000);
-  }
-
-  // Most image hosts (nintendo.com, amazon.com, etc.) don't send
-  // Access-Control-Allow-Origin, so a direct browser fetch() is blocked
-  // from reading the bytes no matter where this page is hosted. We try
-  // a direct fetch first, and only fall back to a CORS-unlocking proxy
-  // (which re-serves the same bytes with permissive CORS headers) if
-  // that fails. Page links (like Amazon product pages) will still fail
-  // here since the proxy just returns HTML, not an image — those land
-  // in the manual-download list either way, as expected.
-  // wsrv.nl and codetabs are dedicated proxying services (send permissive
-  // CORS headers and generally aren't rate-limited) so they're tried first;
-  // allorigins/corsproxy are general-purpose fallbacks that are more prone
-  // to rate-limiting or being blocked outright by anti-hotlinking CDNs
-  // (some retailers, e.g. B&H Photo, block requests from ALL known public
-  // proxies — those links will still land in the manual-download list).
-  // Each proxy gets one quick retry on a 403/429 (rate-limit) response,
-  // since those are often transient rather than a hard block.
-  const PROXIES = [
-    url => 'https://wsrv.nl/?url=' + encodeURIComponent(url),
-    url => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url),
-    url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
-    url => 'https://corsproxy.io/?url=' + encodeURIComponent(url)
-  ];
-
-  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-
-  async function fetchWithTimeout(url){
-    const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-    try {
-      return await fetch(url, {mode:'cors', cache:'no-store', signal: controller.signal});
-    } finally {
-      clearTimeout(t);
-    }
-  }
-
-  async function fetchImage(url){
-    try {
-      const res = await fetchWithTimeout(url);
-      const ctype = (res.headers.get('content-type') || '').toLowerCase();
-      if (res.ok && ctype.startsWith('image/')) return {res, ctype, viaProxy:false};
-    } catch(e){ /* fall through to proxies */ }
-
-    for (const buildProxyUrl of PROXIES){
-      for (let attempt = 0; attempt < 2; attempt++){
-        try {
-          const res = await fetchWithTimeout(buildProxyUrl(url));
-          const ctype = (res.headers.get('content-type') || '').toLowerCase();
-          if (res.ok && ctype.startsWith('image/')) return {res, ctype, viaProxy:true};
-          if (attempt === 0 && (res.status === 403 || res.status === 429)){
-            await sleep(600 + Math.random() * 500);
-            continue;
-          }
-          break;
-        } catch(e){ break; /* network/CORS error on this proxy, try next */ }
-      }
-    }
-    throw new Error('could not fetch as an image (blocked, timed out, or not an image response)');
-  }
-
-  async function runDownload(){
-    const selected = rows.filter(r => r.selected);
-    if (!selected.length) return;
-
-    const maxPerZip = getZipSize();
-    cancelled = false;
-    downloadBtn.disabled = true;
-    cancelBtn.style.display = 'inline-block';
-    progressWrap.classList.add('show');
-    resultsEl.classList.remove('show');
-    manualActions.style.display = 'none';
-    progressFill.style.width = '0%';
-    logEl.innerHTML = '';
-
-    let ok = 0, bad = 0, proxied = 0;
-    const failures = [];
-    const okItems = []; // {folder, name, blob}
-    const CONCURRENCY = 4;
-    let idx = 0;
-
-    async function worker(startDelay){
-      if (startDelay) await sleep(startDelay);
-      while (idx < selected.length){
-        if (cancelled) return;
-        const i = idx++;
-        const item = selected[i];
-        try {
-          const {res, ctype, viaProxy} = await fetchImage(item.url);
-          const blob = await res.blob();
-          if (!blob || blob.size === 0) throw new Error('empty response body');
-          const ext = extFromContentType(ctype) || extFromUrl(item.url) || 'jpg';
-          const name = sanitize(item.title) + '.' + ext;
-          okItems.push({folder: item.domain, name, blob});
-          ok++;
-          if (viaProxy){ proxied++; logLine('OK (via proxy)  ' + item.title, 'proxy'); }
-          else logLine('OK   ' + item.title, 'ok');
-        } catch(err){
-          bad++;
-          failures.push(item);
-          logLine('FAIL ' + item.title + '  —  ' + err.message, 'fail');
-        }
-        progressLabel.textContent = `${Math.min(idx, selected.length)} of ${selected.length} processed`;
-        progressFill.style.width = Math.round((Math.min(idx, selected.length)/selected.length)*100) + '%';
-      }
-    }
-
-    const workers = [];
-    for (let w=0; w<Math.min(CONCURRENCY, selected.length); w++) workers.push(worker(w * 150));
-    await Promise.all(workers);
-
-    if (cancelled){
-      logLine('Stopped — ' + ok + ' image(s) fetched before cancelling were not zipped.', 'fail');
-      progressWrap.classList.remove('show');
-      cancelBtn.style.display = 'none';
-      downloadBtn.disabled = false;
-      return;
-    }
-
-    // Build one or more zips, capped at the user's chosen items-per-zip, so a
-    // large selection doesn't force one huge generateAsync() call.
-    const chunkCount = Math.max(1, Math.ceil(okItems.length / maxPerZip));
-    for (let c = 0; c < chunkCount; c++){
-      const chunk = okItems.slice(c*maxPerZip, (c+1)*maxPerZip);
-      const zip = new JSZip();
-      const used = {};
-      chunk.forEach(it => {
-        const name = uniqueName(used, it.folder, it.name);
-        zip.file(it.folder + '/' + name, it.blob);
-      });
-      if (c === chunkCount - 1 && failures.length){
-        zip.file('_manual-download-needed.html', buildManualHtml(failures));
-        zip.file('_manual-download-needed.csv', buildManualCsv(failures));
-      }
-      progressLabel.textContent = chunkCount > 1 ? `Zipping batch ${c+1} of ${chunkCount}…` : 'Zipping…';
-      const content = await zip.generateAsync({type:'blob'});
-      const filename = chunkCount > 1 ? `images_batch_${c+1}_of_${chunkCount}.zip` : 'images.zip';
-      triggerDownload(content, filename);
-      logLine('Downloaded ' + filename + ' (' + Object.keys(zip.files).length + ' file(s))', 'ok');
-    }
-
-    progressWrap.classList.remove('show');
-    cancelBtn.style.display = 'none';
-    resultsEl.classList.add('show');
-    okNEl.textContent = ok;
-    badNEl.textContent = bad;
-    lastFailures = failures;
-    const notes = [];
-    if (proxied) notes.push(`${proxied} image${proxied===1?'':'s'} needed a CORS-unlocking proxy to fetch (that's normal for hosts like nintendo.com that don't allow direct cross-origin downloads) — that request was visible to the proxy service.`);
-    if (bad) notes.push(`${bad} link${bad===1?'':'s'} couldn't be fetched automatically — usually because it's a store product page rather than a direct image file, it timed out, or the host (some retailers, e.g. B&amp;H Photo) actively blocks every public CORS proxy this tool can try. They're bundled in the ZIP as <code>_manual-download-needed.html</code> (clickable links, opens in a new tab) and <code>_manual-download-needed.csv</code> — or use the buttons below to get them right now without opening the ZIP.`);
-    if (notes.length){
-      failNote.style.display = 'block';
-      failNote.innerHTML = notes.join('<br><br>');
-    } else {
-      failNote.style.display = 'none';
-    }
-    manualActions.style.display = failures.length ? 'flex' : 'none';
-    downloadBtn.disabled = false;
-  }
-
-  function csvField(s){
-    s = String(s == null ? '' : s);
-    return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
-  }
-
-  function buildManualCsv(failures){
-    const lines = ['Title,URL'];
-    failures.forEach(f => lines.push(csvField(f.title) + ',' + csvField(f.url)));
-    return lines.join('\r\n');
-  }
-
-  function buildManualHtml(failures){
-    const rowsHtml = failures.map((f, i) => `
-        <tr>
-          <td class="n">${i + 1}</td>
-          <td class="t">${escapeHtml(f.title)}</td>
-          <td class="d">${escapeHtml(f.domain)}</td>
-          <td class="a"><a href="${escapeAttr(f.url)}" target="_blank" rel="noopener noreferrer">Open ↗</a></td>
-        </tr>`).join('');
-    const dataJson = JSON.stringify(failures.map(f => f.url));
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Links to download manually (${failures.length})</title>
-<style>
-  :root{--bg:#fff;--panel:#fff;--border:#e6e7ef;--text:#171923;--muted:#6b7085;--accent:#6d5bf5;--accent-2:#a855f7;--chip:#f0f1f6;}
-  @media (prefers-color-scheme: dark){:root{--bg:#0e0f14;--panel:#181a23;--border:#2a2d3a;--text:#f1f2f6;--muted:#9296ab;--chip:#242631;}}
-  *{box-sizing:border-box;}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;}
-  .wrap{max-width:800px;margin:0 auto;padding:36px 20px 60px;}
-  h1{font-size:1.3rem;margin:0 0 6px;}
-  p.sub{color:var(--muted);font-size:0.9rem;line-height:1.5;margin:0 0 20px;}
-  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
-  button{
-    background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;border:none;padding:10px 18px;
-    border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;
-  }
-  button.secondary{background:var(--chip);color:var(--text);}
-  table{width:100%;border-collapse:collapse;font-size:0.87rem;}
-  th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);color:var(--muted);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;}
-  td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
-  td.n{color:var(--muted);width:32px;}
-  td.d span{background:var(--chip);padding:2px 8px;border-radius:999px;font-size:0.75rem;}
-  td.a a{color:var(--accent);text-decoration:none;font-weight:600;white-space:nowrap;}
-  td.a a:hover{text-decoration:underline;}
-  #note{font-size:0.8rem;color:var(--muted);margin-top:14px;}
-</style>
-</head>
-<body>
-<div class="wrap">
-  <h1>${failures.length} link${failures.length === 1 ? '' : 's'} to download manually</h1>
-  <p class="sub">These couldn't be fetched automatically — often a store product page rather than a direct image file, or the host blocks every available proxy. Click a link below to open it, or use "Open all" to open every link in its own tab.</p>
-  <div class="actions">
-    <button id="openAllBtn" type="button">Open all in new tabs</button>
-    <button id="csvBtn" type="button" class="secondary">Download as CSV</button>
-  </div>
-  <table>
-    <thead><tr><th></th><th>Title</th><th>Domain</th><th></th></tr></thead>
-    <tbody>${rowsHtml}
-    </tbody>
-  </table>
-  <p id="note"></p>
-</div>
-<script>
-  const LINKS = ${dataJson};
-  document.getElementById('openAllBtn').addEventListener('click', function(){
-    let blocked = 0;
-    LINKS.forEach(function(u){
-      const w = window.open(u, '_blank', 'noopener');
-      if (!w) blocked++;
-    });
-    document.getElementById('note').textContent = blocked
-      ? blocked + ' tab(s) were blocked by your browser\\'s popup blocker — allow popups for this page and try again, or click links individually.'
-      : 'Opened ' + LINKS.length + ' tab(s).';
-  });
-  document.getElementById('csvBtn').addEventListener('click', function(){
-    const rows = [['Title','URL']].concat(
-      Array.prototype.map.call(document.querySelectorAll('tbody tr'), function(tr){
-        const title = tr.querySelector('td.t').textContent;
-        const url = tr.querySelector('td.a a').href;
-        const esc = function(s){ return /[",\\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; };
-        return [esc(title), esc(url)];
-      })
-    );
-    const csv = rows.map(function(r){ return r.join(','); }).join('\\r\\n');
-    const blob = new Blob([csv], {type:'text/csv'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'failed-links.csv';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  });
-<\/script>
-</body>
-</html>`;
-  }
-
-  function extFromContentType(ctype){
-    const map = {'image/jpeg':'jpg','image/png':'png','image/gif':'gif','image/webp':'webp','image/svg+xml':'svg','image/bmp':'bmp','image/avif':'avif'};
-    return map[ctype.split(';')[0].trim()];
-  }
-  function extFromUrl(url){
-    const m = url.match(/\.([a-z0-9]{2,4})(\?|#|$)/i);
-    return m ? m[1].toLowerCase() : null;
-  }
-  function sanitize(name){
-    return name.replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g,' ').trim().slice(0,120) || 'image';
-  }
-  function uniqueName(used, folder, name){
-    const key = folder + '/' + name;
-    if (!used[key]){ used[key] = 1; return name; }
-    const dot = name.lastIndexOf('.');
-    const base = dot > -1 ? name.slice(0,dot) : name;
-    const ext = dot > -1 ? name.slice(dot) : '';
-    let n = used[key] + 1;
-    let candidate;
-    do { candidate = `${base} (${n})${ext}`; n++; } while (used[folder + '/' + candidate]);
-    used[key]++;
-    used[folder + '/' + candidate] = 1;
-    return candidate;
-  }
-  function triggerDownload(blob, filename){
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
-  }
-})();
-</script>
 </body>
 </html>
