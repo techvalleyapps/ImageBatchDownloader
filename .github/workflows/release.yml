@@ -45,7 +45,10 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           git fetch origin main:main
           git checkout main
-          sed -i "s/version='[^']*'/version='${VERSION}'/" update.xml
+          # Anchored to `codebase=` so this only ever touches the real
+          # <updatecheck version='...'> attribute, never the unrelated
+          # version='1.0' in the <?xml ...?> declaration on line 1.
+          sed -i "s/\(codebase='[^']*' version='\)[^']*'/\1${VERSION}'/" update.xml
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add update.xml
