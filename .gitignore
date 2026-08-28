@@ -36,3 +36,10 @@ dist/
 *.orig
 .env
 .env.local
+
+# ── Extension signing key — NEVER commit this ──
+# Anyone with this file can publish updates that impersonate this extension.
+# Keep it only in a local secure location (password manager / offline backup).
+signing-key.pem
+*.crx
+release/
