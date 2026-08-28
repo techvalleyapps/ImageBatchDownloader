@@ -1,144 +1,105 @@
 # 🖼️ Image Batch Downloader
 
-A Chrome extension for downloading images in bulk from a spreadsheet of
-titles and URLs — straight to a ZIP, no CORS proxy involved.
+A Chrome extension that downloads a whole batch of images at once from a
+spreadsheet — just give it a list of titles and image links, and it hands
+you back a ZIP.
 
-**Get it:** [apps.ipadhires.co.uk/ImageBatchDownloader](https://apps.ipadhires.co.uk/ImageBatchDownloader/) · or jump straight to the [latest release ZIP](https://github.com/techvalleyapps/ImageBatchDownloader/releases/latest/download/ImageBatchDownloader.zip)
+**Get it:** [apps.ipadhires.co.uk/ImageBatchDownloader](https://apps.ipadhires.co.uk/ImageBatchDownloader/) · or jump straight to the [download](https://github.com/techvalleyapps/ImageBatchDownloader/releases/latest/download/ImageBatchDownloader.zip)
 
-Not on the Chrome Web Store — installed and updated straight from this repo.
-
----
-
-## Features
-
-- Upload an **.xlsx**, **.xls**, or **.csv** file — any header names work, you pick which columns are the title and which are the image URL
-- Auto-detects likely title/URL columns as a starting point, with dropdowns to override
-- Rows grouped into filterable domain chips, plus a text search, so you can review before downloading
-- Choose how many images go in each ZIP ("Items per ZIP", default 100) — large selections split across multiple ZIPs automatically
-- **Fetches bypass CORS entirely** — as an extension with host permissions, there's no unlocking proxy in the loop, so no host can block the download by blocking a proxy (this was the whole reason this stopped being a plain web page)
-- Links that still can't be fetched (dead links, or a store page instead of a direct image) land in a `_manual-download-needed.html`/`.csv` inside the ZIP — the HTML one has clickable links and an "open all in new tabs" button
+This isn't on the Chrome Web Store — it's installed straight from this page instead. That's normal, not a red flag; see below for why.
 
 ---
 
-## Install (manual — primary, always works)
+## What it does
 
-1. Download the latest release ZIP: [`ImageBatchDownloader.zip`](https://github.com/techvalleyapps/ImageBatchDownloader/releases/latest/download/ImageBatchDownloader.zip) (that link always points at whatever is currently latest), and unzip it anywhere.
-2. Open `chrome://extensions` in Chrome.
-3. Turn on **Developer mode** (top-right toggle).
-4. Click **Load unpacked** and select the unzipped folder.
-5. Click the toolbar icon to open the tool in a new tab.
+1. You give it a spreadsheet (`.xlsx`, `.xls`, or `.csv`) with a column of
+   titles and a column of image links — any file, any column names.
+2. It shows you every row, grouped by website and searchable, so you can
+   pick exactly which ones you want.
+3. Click download, and it fetches every selected image and hands you a
+   ZIP — split into smaller ZIPs automatically if you've selected a lot.
+4. Anything it couldn't grab (a dead link, or a page instead of a direct
+   image) gets listed separately with clickable links, so you can grab
+   those few by hand instead of hunting through the whole list.
 
-This install method doesn't auto-update — re-download and re-load the folder (or click the reload icon on the extension card in `chrome://extensions`) to get a new version.
+Because it's an extension rather than a website, it can fetch images from
+places a website could never reach — no more "some images just won't
+download" from stubborn stores or CDNs.
 
 ---
 
-## Optional: silent auto-update
+## Install
 
-If you want Chrome to install this extension silently and keep it updated
-forever with no manual steps, there's a script for that — **but read the
-trade-offs first**, because there's no way around them with this mechanism:
+1. Download the ZIP: **[ImageBatchDownloader.zip](https://github.com/techvalleyapps/ImageBatchDownloader/releases/latest/download/ImageBatchDownloader.zip)** (this link always gets you the newest version), then unzip it somewhere you'll keep it — don't delete the folder after installing, Chrome keeps loading the extension from it.
+2. Open a new Chrome tab and go to `chrome://extensions`.
+3. Turn on **Developer mode** using the toggle in the top-right corner.
+4. Click **Load unpacked** and select the folder you unzipped.
+5. Done — click the icon in your Chrome toolbar any time to open the tool.
 
-- Chrome will show a permanent **"Managed by your organization"** banner. This happens for *any* Chrome policy key, even one you set yourself on your own machine — it's not specific to this extension.
-- The extension becomes **force-installed**: you can't disable or remove it from `chrome://extensions` UI. Undo it with the uninstall script below instead.
-- Scope is your Windows user only (`HKCU`) — no admin rights needed, and it doesn't affect other Windows accounts on the machine.
+If you don't see the icon in your toolbar, click the puzzle-piece icon
+next to the address bar and pin it from there.
 
-If that's fine with you:
+This way of installing won't update itself automatically — to get a newer
+version later, download the new ZIP and repeat these steps (or just click
+the reload icon on the extension's card in `chrome://extensions`). If
+you'd rather it update itself, see the next section.
+
+---
+
+## Optional: make it update itself automatically
+
+By default you'll need to manually re-install for each new version. If
+you'd rather Chrome handle that silently in the background, open
+**PowerShell** and paste in:
 
 ```powershell
-./scripts/install-autoupdate.ps1
+irm https://raw.githubusercontent.com/techvalleyapps/ImageBatchDownloader/main/scripts/install-autoupdate.ps1 | iex
 ```
 
-This adds one entry to the `ExtensionInstallForcelist` Chrome policy — it
-only ever *adds* an entry at the next free slot; it never touches or
-renumbers anything already there from other software, and running it
-again is a safe no-op. Restart Chrome afterward.
+This downloads and runs a small script that tells Chrome to keep this
+extension installed and updated on its own. A couple of things worth
+knowing before you run it:
 
-To undo:
+- Chrome will start showing a permanent **"Managed by your organization"**
+  banner. That's just what Chrome always shows once *any* setting like
+  this is turned on — even one you turned on yourself — there's no way
+  to keep the auto-update behavior without it.
+- You won't be able to remove or turn off the extension from the normal
+  `chrome://extensions` page anymore — you'll need to run the undo
+  command below instead.
+- This only affects your own Windows user account — no admin rights
+  needed, and it won't touch anyone else who uses this computer.
+
+To undo it later:
 
 ```powershell
-./scripts/uninstall-autoupdate.ps1
+irm https://raw.githubusercontent.com/techvalleyapps/ImageBatchDownloader/main/scripts/uninstall-autoupdate.ps1 | iex
 ```
 
-This removes only this extension's entry, leaving everything else in that
-policy list exactly as it was.
+Restart Chrome after running either command for it to take effect.
 
 ---
 
-## Running locally / development
+## Why isn't this on the Chrome Web Store?
 
-Same as manual install above (`Load unpacked`), pointed at the `extension/`
-folder directly in this repo — no build step needed for day-to-day use.
-
----
-
-## For maintainers: releasing a new version
-
-### Automatic (recommended) — `.github/workflows/release.yml`
-
-Pushing a version tag builds, signs, zips, publishes the GitHub Release
-with both files under their fixed names, and bumps `update.xml` on `main`
-— all in one go:
-
-```bash
-# bump "version" in extension/manifest.json first, commit that, then:
-git tag v1.2.0
-git push origin v1.2.0
-```
-
-One-time setup: add a repository secret named `SIGNING_KEY` (Settings →
-Secrets and variables → Actions → New repository secret) containing the
-**full contents** of your local `signing-key.pem`, BEGIN/END lines
-included. This is the only way the workflow can sign a release that
-existing installs will accept as an update — anyone with this secret can
-publish a malicious update, so treat it like a password. GitHub encrypts
-it at rest and never prints it in logs.
-
-Every push to `main` that *isn't* a version tag does **not** trigger a
-release — only tags matching `v*.*.*` do, so ordinary commits are safe.
-
-### Manual fallback — `scripts/build-crx.ps1`
-
-If you'd rather build locally (no secret needed, since it reads your local
-`signing-key.pem` directly):
-
-1. Bump `"version"` in `extension/manifest.json`.
-2. Run `./scripts/build-crx.ps1` — packs and signs `extension/` using the
-   repo's local `signing-key.pem` (this file is **never committed**; if you
-   don't have it, you don't have the ability to publish an update that
-   existing installs will accept — keep it in a password manager or secure
-   offline backup, not in git). Requires Chrome installed locally.
-3. This produces `release/ImageBatchDownloader.crx` and `release/ImageBatchDownloader.zip`.
-4. Create a GitHub Release (tag matching the version) and attach **both**
-   files under those exact filenames — the download page, the README, and
-   `update.xml` all link to the "latest release" alias URL for those fixed
-   names, so nothing else needs to change per release.
-5. Update the `version` attribute in `update.xml` (its `codebase` URL never
-   needs to change) and commit to `main` — this is what tells already-installed
-   copies (via the optional auto-update mechanism) that a new version exists.
+It's a small internal-use tool, so it's simplest to distribute straight
+from GitHub rather than going through a store listing. Nothing shady
+about it — the source code above is exactly what you're installing.
 
 ---
 
-## Why this isn't a web page anymore
+## Your data stays on your machine
 
-The previous version ran as a plain web page and had to fetch images
-through a chain of public CORS-unlocking proxies, since a browser blocks a
-page's own JavaScript from reading a cross-origin response unless the
-target server opts in. Some hosts (e.g. certain retailers) block every
-public proxy outright, so those downloads always failed no matter how many
-fallback proxies were added. A Chrome extension with `host_permissions`
-fetches cross-origin with full CORS bypass in its own page context — the
-entire proxy chain is gone, not routed around better.
-
----
-
-## Tech stack
-
-- Manifest V3 Chrome extension, vanilla HTML/CSS/JS — no build step
-- [SheetJS / xlsx](https://sheetjs.com/) and [JSZip](https://stuk.github.io/jszip/), vendored locally in `extension/lib/` (MV3 blocks loading remote scripts)
-- `chrome.downloads` API for saving files; `host_permissions` for CORS-free `fetch()`
+Everything runs locally inside the extension. Your spreadsheet, the
+images, and the ZIP it builds never get sent anywhere else — there's no
+server involved and no proxy in the loop.
 
 ---
 
 ## License
 
 MIT — free to use, fork, and modify.
+
+---
+
+*Maintaining or contributing to this repo? See [DEVELOPMENT.md](DEVELOPMENT.md).*
