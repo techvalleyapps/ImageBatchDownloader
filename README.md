@@ -73,6 +73,34 @@ folder directly in this repo — no build step needed for day-to-day use.
 
 ## For maintainers: releasing a new version
 
+### Automatic (recommended) — `.github/workflows/release.yml`
+
+Pushing a version tag builds, signs, zips, publishes the GitHub Release
+with both files under their fixed names, and bumps `update.xml` on `main`
+— all in one go:
+
+```bash
+# bump "version" in extension/manifest.json first, commit that, then:
+git tag v1.2.0
+git push origin v1.2.0
+```
+
+One-time setup: add a repository secret named `SIGNING_KEY` (Settings →
+Secrets and variables → Actions → New repository secret) containing the
+**full contents** of your local `signing-key.pem`, BEGIN/END lines
+included. This is the only way the workflow can sign a release that
+existing installs will accept as an update — anyone with this secret can
+publish a malicious update, so treat it like a password. GitHub encrypts
+it at rest and never prints it in logs.
+
+Every push to `main` that *isn't* a version tag does **not** trigger a
+release — only tags matching `v*.*.*` do, so ordinary commits are safe.
+
+### Manual fallback — `scripts/build-crx.ps1`
+
+If you'd rather build locally (no secret needed, since it reads your local
+`signing-key.pem` directly):
+
 1. Bump `"version"` in `extension/manifest.json`.
 2. Run `./scripts/build-crx.ps1` — packs and signs `extension/` using the
    repo's local `signing-key.pem` (this file is **never committed**; if you
