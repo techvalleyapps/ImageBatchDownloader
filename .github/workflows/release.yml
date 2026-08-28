@@ -1,0 +1,61 @@
+name: Release extension
+
+# Fires on pushing a version tag (e.g. `git tag v1.2.0 && git push origin v1.2.0`)
+# — not on every push to main, so ordinary commits don't spam a release.
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+
+      - name: Write signing key from secret
+        run: printf '%s' "${{ secrets.SIGNING_KEY }}" > signing-key.pem
+
+      - name: Locate Chrome
+        id: chrome
+        run: |
+          BIN="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium-browser)"
+          echo "Found: $BIN"
+          echo "bin=$BIN" >> "$GITHUB_OUTPUT"
+
+      - name: Pack and sign the extension
+        run: |
+          mkdir -p release
+          "${{ steps.chrome.outputs.bin }}" --pack-extension=extension --pack-extension-key=signing-key.pem --no-sandbox
+          mv extension.crx release/ImageBatchDownloader.crx
+
+      - name: Zip the extension (for "Load unpacked")
+        run: (cd extension && zip -r ../release/ImageBatchDownloader.zip .)
+
+      - name: Discard the signing key
+        if: always()
+        run: rm -f signing-key.pem
+
+      - name: Bump update.xml on main
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          git fetch origin main:main
+          git checkout main
+          sed -i "s/version='[^']*'/version='${VERSION}'/" update.xml
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add update.xml
+          git diff --cached --quiet || git commit -m "update.xml: bump to ${GITHUB_REF_NAME}"
+          git push origin main
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            release/ImageBatchDownloader.crx
+            release/ImageBatchDownloader.zip
