@@ -22,6 +22,7 @@
   const progressFill = document.getElementById('progressFill');
   const progressLabel = document.getElementById('progressLabel');
   const lanesEl = document.getElementById('lanes');
+  const logWrap = document.getElementById('logWrap');
   const logEl = document.getElementById('log');
   const cancelBtn = document.getElementById('cancelBtn');
   const resultsEl = document.getElementById('results');
@@ -409,6 +410,7 @@
     startBtn.disabled = true;
     cancelBtn.style.display = 'inline-block';
     progressWrap.classList.add('show');
+    logWrap.classList.add('show');
     resultsEl.classList.remove('show');
     manualActions.style.display = 'none';
     progressFill.style.width = '0%';
