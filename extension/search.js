@@ -314,6 +314,15 @@
     return (frames && frames[0] && frames[0].result) || null;
   }
 
+  // Storage/RAM capacity (e.g. "128GB", "8/256GB", "1TB") rarely appears in
+  // a product page's title/snippet and only hurts the match score — strip it
+  // for searching/matching while keeping the original title for the filename.
+  const STORAGE_RE = /\b\d+(?:\s?\/\s?\d+)?\s?(?:GB|TB|MB)\b/gi;
+  function stripStorage(title){
+    const stripped = (title || '').replace(STORAGE_RE, ' ').replace(/\s+/g, ' ').trim();
+    return stripped || title;
+  }
+
   function wordSet(s){
     return (s || '').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean);
   }
@@ -412,14 +421,19 @@
 
   async function searchAndFetch(tabId, title, onVisit){
     const notify = typeof onVisit === 'function' ? onVisit : () => {};
-    const q = encodeURIComponent(title);
+    // Search/match on the title with storage/RAM capacity stripped (e.g.
+    // "128GB") — it rarely appears on the product page and only hurts
+    // matching. The original title (with capacity) is still used for the
+    // saved filename, elsewhere.
+    const searchTitle = stripStorage(title);
+    const q = encodeURIComponent(searchTitle);
     await navigateAndWait(tabId, `https://www.google.com/search?q=${q}&num=10&hl=en`, 20000);
     await delay(400); // small settle time in case of client-side render
     const results = await extractGoogleResults(tabId);
     if (!results.length) throw Object.assign(new Error('no organic result found'), {stage:'search'});
 
-    const ranked = rankResults(title, results);
-    const brand = brandToken(title);
+    const ranked = rankResults(searchTitle, results);
+    const brand = brandToken(searchTitle);
     const officialOnly = ranked.filter(r => isOfficialOrAmazon(r.href, brand));
     if (officialOnly.length){
       notify({url: null, imageUrl: null, note: `restricting to official/Amazon results: ${officialOnly.map(r => hostnameOf(r.href)).join(', ')}`});
