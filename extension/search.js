@@ -332,21 +332,26 @@
     if (!best) throw Object.assign(new Error('no organic result found'), {stage:'search'});
 
     await navigateAndWait(tabId, best.href, 20000);
-    let imageUrl = await extractProductImage(tabId);
+    const landingImageUrl = await extractProductImage(tabId);
+    const buyUrl = await findBuyNowLink(tabId);
+
+    let imageUrl = null;
     let pageUrl = best.href;
 
-    if (!imageUrl){
-      // Landed on a feature/overview page with no real product image —
-      // look for a Buy Now / Shop Now link and check the page it leads to.
-      const buyUrl = await findBuyNowLink(tabId);
-      if (buyUrl && buyUrl !== best.href){
-        await navigateAndWait(tabId, buyUrl, 20000);
-        const buyImageUrl = await extractProductImage(tabId);
-        if (buyImageUrl){
-          imageUrl = buyImageUrl;
-          pageUrl = buyUrl;
-        }
+    if (buyUrl && buyUrl !== best.href){
+      // Prefer the Buy Now / Shop Now destination's image over the landing page's.
+      await navigateAndWait(tabId, buyUrl, 20000);
+      const buyImageUrl = await extractProductImage(tabId);
+      if (buyImageUrl){
+        imageUrl = buyImageUrl;
+        pageUrl = buyUrl;
       }
+    }
+
+    if (!imageUrl && landingImageUrl){
+      // Fall back to the image already found on the original landing page.
+      imageUrl = landingImageUrl;
+      pageUrl = best.href;
     }
 
     if (!imageUrl) throw Object.assign(new Error('no product image found on ' + pageUrl), {stage:'image', pageUrl});
