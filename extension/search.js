@@ -330,7 +330,8 @@
     return best;
   }
 
-  async function searchAndFetch(tabId, title){
+  async function searchAndFetch(tabId, title, onVisit){
+    const notify = typeof onVisit === 'function' ? onVisit : () => {};
     const q = encodeURIComponent(title);
     await navigateAndWait(tabId, `https://www.google.com/search?q=${q}&num=10&hl=en`, 20000);
     await delay(400); // small settle time in case of client-side render
@@ -340,6 +341,7 @@
 
     await navigateAndWait(tabId, best.href, 20000);
     const landingImageUrl = await extractProductImage(tabId);
+    notify({url: best.href, imageUrl: landingImageUrl});
     const buyUrl = await findBuyNowLink(tabId);
 
     let imageUrl = null;
@@ -349,6 +351,7 @@
       // Prefer the Buy Now / Shop Now destination's image over the landing page's.
       await navigateAndWait(tabId, buyUrl, 20000);
       const buyImageUrl = await extractProductImage(tabId);
+      notify({url: buyUrl, imageUrl: buyImageUrl});
       if (buyImageUrl){
         imageUrl = buyImageUrl;
         pageUrl = buyUrl;
@@ -432,7 +435,9 @@
         setStatus(item, 'working', 'Searching…');
         setLaneStatus(laneIndex, 'Searching: ' + item.title);
         try {
-          const {imageUrl, pageUrl} = await searchAndFetch(tab.id, item.title);
+          const {imageUrl, pageUrl} = await searchAndFetch(tab.id, item.title, ({url, imageUrl}) => {
+            logLine('  visited ' + url + '  →  image: ' + (imageUrl || 'none found'));
+          });
           setLaneStatus(laneIndex, 'Fetching image for: ' + item.title);
           const {res, ctype} = await fetchImage(imageUrl);
           const blob = await res.blob();
