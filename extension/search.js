@@ -278,6 +278,29 @@
     return (frames && frames[0] && frames[0].result) || null;
   }
 
+  async function findBuyNowLink(tabId){
+    const frames = await chrome.scripting.executeScript({
+      target: {tabId},
+      func: function(){
+        function abs(u){ try { return new URL(u, document.baseURI).href; } catch(e){ return null; } }
+        const BUY_RE = /\b(buy\s*(it)?\s*now|shop\s*now|order\s*now|add\s*to\s*cart|view\s*product|see\s*product)\b/i;
+        function textOf(el){
+          return ((el.getAttribute && (el.getAttribute('aria-label') || el.getAttribute('title'))) || '' ) + ' ' + (el.textContent || '') + ' ' + (el.value || '');
+        }
+        const candidates = document.querySelectorAll('a, button, [role="button"]');
+        for (const el of candidates){
+          const label = textOf(el).trim().replace(/\s+/g,' ');
+          if (!label || !BUY_RE.test(label)) continue;
+          if (el.tagName === 'A' && el.href) return abs(el.href);
+          const link = el.closest('a[href]');
+          if (link) return abs(link.href);
+        }
+        return null;
+      }
+    });
+    return (frames && frames[0] && frames[0].result) || null;
+  }
+
   function wordSet(s){
     return (s || '').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean);
   }
@@ -309,10 +332,26 @@
     if (!best) throw Object.assign(new Error('no organic result found'), {stage:'search'});
 
     await navigateAndWait(tabId, best.href, 20000);
-    const imageUrl = await extractProductImage(tabId);
-    if (!imageUrl) throw Object.assign(new Error('no product image found on ' + best.href), {stage:'image', pageUrl: best.href});
+    let imageUrl = await extractProductImage(tabId);
+    let pageUrl = best.href;
 
-    return {imageUrl, pageUrl: best.href};
+    if (!imageUrl){
+      // Landed on a feature/overview page with no real product image —
+      // look for a Buy Now / Shop Now link and check the page it leads to.
+      const buyUrl = await findBuyNowLink(tabId);
+      if (buyUrl && buyUrl !== best.href){
+        await navigateAndWait(tabId, buyUrl, 20000);
+        const buyImageUrl = await extractProductImage(tabId);
+        if (buyImageUrl){
+          imageUrl = buyImageUrl;
+          pageUrl = buyUrl;
+        }
+      }
+    }
+
+    if (!imageUrl) throw Object.assign(new Error('no product image found on ' + pageUrl), {stage:'image', pageUrl});
+
+    return {imageUrl, pageUrl};
   }
 
   // ---------- lane pool ----------
