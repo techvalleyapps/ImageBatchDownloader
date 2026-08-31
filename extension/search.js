@@ -220,7 +220,7 @@
         const seen = new Set();
         const anchors = document.querySelectorAll('#search a[href^="http"], #rso a[href^="http"]');
         for (const a of anchors){
-          if (out.length >= 3) break;
+          if (out.length >= 8) break;
           if (isInsideAd(a)) continue;
           const href = a.href;
           if (seen.has(href)) continue;
@@ -333,6 +333,54 @@
       .map(x => x.r);
   }
 
+  // A brand's Google-ranked "official" domain often differs from its name
+  // (e.g. Xiaomi/Redmi/Poco phones are sold from mi.com, not xiaomi.com).
+  const BRAND_DOMAIN_MAP = {
+    xiaomi: ['xiaomi.com', 'mi.com'],
+    redmi: ['mi.com', 'xiaomi.com'],
+    poco: ['pocophone.com', 'mi.com', 'xiaomi.com'],
+    mi: ['mi.com', 'xiaomi.com'],
+    samsung: ['samsung.com'],
+    apple: ['apple.com'],
+    huawei: ['huawei.com', 'consumer.huawei.com'],
+    oneplus: ['oneplus.com'],
+    oppo: ['oppo.com'],
+    vivo: ['vivo.com'],
+    realme: ['realme.com'],
+    sony: ['sony.com', 'electronics.sony.com'],
+    lg: ['lg.com'],
+    google: ['store.google.com', 'google.com'],
+    motorola: ['motorola.com'],
+    nokia: ['nokia.com'],
+    asus: ['asus.com'],
+    lenovo: ['lenovo.com'],
+    hp: ['hp.com'],
+    dell: ['dell.com']
+  };
+
+  function brandToken(title){
+    const w = wordSet(title);
+    return w[0] || null;
+  }
+
+  function hostnameOf(url){
+    try { return new URL(url).hostname.replace(/^www\./, '').toLowerCase(); } catch(e){ return ''; }
+  }
+
+  function isAmazon(hostname){
+    return /(^|\.)amazon\.[a-z.]+$/i.test(hostname);
+  }
+
+  function isOfficialOrAmazon(url, brand){
+    const hostname = hostnameOf(url);
+    if (!hostname) return false;
+    if (isAmazon(hostname)) return true;
+    if (!brand) return false;
+    const mapped = BRAND_DOMAIN_MAP[brand];
+    if (mapped) return mapped.some(d => hostname === d || hostname.endsWith('.' + d));
+    return hostname.includes(brand);
+  }
+
   async function searchAndFetch(tabId, title, onVisit){
     const notify = typeof onVisit === 'function' ? onVisit : () => {};
     const q = encodeURIComponent(title);
@@ -342,9 +390,17 @@
     if (!results.length) throw Object.assign(new Error('no organic result found'), {stage:'search'});
 
     const ranked = rankResults(title, results);
+    const brand = brandToken(title);
+    const officialOnly = ranked.filter(r => isOfficialOrAmazon(r.href, brand));
+    if (officialOnly.length){
+      notify({url: null, imageUrl: null, note: `restricting to official/Amazon results: ${officialOnly.map(r => hostnameOf(r.href)).join(', ')}`});
+    } else {
+      notify({url: null, imageUrl: null, note: 'no official/Amazon result in top candidates — falling back to other results'});
+    }
+    const candidates = officialOnly.length ? officialOnly : ranked;
     let lastPageUrl = null;
 
-    for (const candidate of ranked){
+    for (const candidate of candidates){
       let imageUrl;
       try {
         await navigateAndWait(tabId, candidate.href, 20000);
@@ -359,7 +415,7 @@
       if (imageUrl) return {imageUrl, pageUrl: candidate.href};
     }
 
-    throw Object.assign(new Error('no product image found on ' + (ranked.length > 1 ? `${ranked.length} candidate pages` : lastPageUrl)), {stage:'image', pageUrl: lastPageUrl});
+    throw Object.assign(new Error('no product image found on ' + (candidates.length > 1 ? `${candidates.length} candidate pages` : lastPageUrl)), {stage:'image', pageUrl: lastPageUrl});
   }
 
   // ---------- lane pool ----------
@@ -429,8 +485,9 @@
         setStatus(item, 'working', 'Searching…');
         setLaneStatus(laneIndex, 'Searching: ' + item.title);
         try {
-          const {imageUrl, pageUrl} = await searchAndFetch(tab.id, item.title, ({url, imageUrl}) => {
-            logLine('  visited ' + url + '  →  image: ' + (imageUrl || 'none found'));
+          const {imageUrl, pageUrl} = await searchAndFetch(tab.id, item.title, ({url, imageUrl, note}) => {
+            if (note) logLine('  ' + note);
+            else logLine('  visited ' + url + '  →  image: ' + (imageUrl || 'none found'));
           });
           setLaneStatus(laneIndex, 'Fetching image for: ' + item.title);
           const {res, ctype} = await fetchImage(imageUrl);
