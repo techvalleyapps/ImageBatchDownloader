@@ -35,6 +35,7 @@
   const titleColEl = document.getElementById('titleCol');
   const zipSizeInput = document.getElementById('zipSizeInput');
   const laneCountInput = document.getElementById('laneCount');
+  const searchEngineEl = document.getElementById('searchEngine');
 
   let cancelled = false;
   let lastFailures = [];
@@ -178,6 +179,9 @@
     if (!Number.isFinite(n) || n < 1) return 5;
     return Math.min(n, 5);
   }
+  function getPrimaryEngine(){
+    return searchEngineEl.value === 'duckduckgo' ? 'duckduckgo' : 'google';
+  }
 
   function delay(ms){ return new Promise(r => setTimeout(r, ms)); }
   function randomDelay(minMs, maxMs){ return delay(minMs + Math.random()*(maxMs-minMs)); }
@@ -240,6 +244,58 @@
     });
     return (frames && frames[0] && frames[0].result) || [];
   }
+
+  async function extractDuckDuckGoResults(tabId){
+    const frames = await chrome.scripting.executeScript({
+      target: {tabId},
+      func: function(){
+        const out = [];
+        const seen = new Set();
+        const blocks = document.querySelectorAll('.web-result');
+        for (const block of blocks){
+          if (out.length >= 8) break;
+          const a = block.querySelector('a.result__a');
+          if (!a || !a.href) continue;
+          let href;
+          try {
+            const u = new URL(a.href, location.href);
+            href = (u.hostname.includes('duckduckgo.com') && u.searchParams.has('uddg'))
+              ? decodeURIComponent(u.searchParams.get('uddg'))
+              : u.href;
+          } catch(e){ continue; }
+          if (!href || seen.has(href)) continue;
+          seen.add(href);
+          const snippetEl = block.querySelector('.result__snippet');
+          out.push({href, title: a.textContent.trim(), snippet: snippetEl ? snippetEl.textContent.trim() : ''});
+        }
+        return out;
+      }
+    });
+    return (frames && frames[0] && frames[0].result) || [];
+  }
+
+  function isGoogleBlocked(tabId){
+    return chrome.scripting.executeScript({
+      target: {tabId},
+      func: function(){
+        return !!document.querySelector('form#captcha-form, div#recaptcha, iframe[src*="recaptcha"]')
+          || /unusual traffic/i.test(document.body ? document.body.textContent.slice(0, 2000) : '');
+      }
+    }).then(frames => !!(frames && frames[0] && frames[0].result)).catch(() => false);
+  }
+
+  const ENGINES = {
+    google: {
+      buildUrl: q => `https://www.google.com/search?q=${q}&num=10&hl=en`,
+      extract: extractGoogleResults,
+      isBlocked: isGoogleBlocked
+    },
+    duckduckgo: {
+      buildUrl: q => `https://html.duckduckgo.com/html/?q=${q}`,
+      extract: extractDuckDuckGoResults,
+      isBlocked: () => Promise.resolve(false)
+    }
+  };
 
   async function extractProductImage(tabId){
     const frames = await chrome.scripting.executeScript({
@@ -419,7 +475,17 @@
     return hostname.includes(brand);
   }
 
-  async function searchAndFetch(tabId, title, onVisit){
+  async function runSearchEngine(tabId, engineName, query){
+    const engine = ENGINES[engineName];
+    await navigateAndWait(tabId, engine.buildUrl(query), 20000);
+    await delay(400); // small settle time in case of client-side render
+    const blocked = await engine.isBlocked(tabId);
+    if (blocked) return {results: [], blocked: true};
+    const results = await engine.extract(tabId);
+    return {results, blocked: false};
+  }
+
+  async function searchAndFetch(tabId, title, onVisit, primaryEngine){
     const notify = typeof onVisit === 'function' ? onVisit : () => {};
     // Search/match on the title with storage/RAM capacity stripped (e.g.
     // "128GB") — it rarely appears on the product page and only hurts
@@ -427,10 +493,16 @@
     // saved filename, elsewhere.
     const searchTitle = stripStorage(title);
     const q = encodeURIComponent(searchTitle);
-    await navigateAndWait(tabId, `https://www.google.com/search?q=${q}&num=10&hl=en`, 20000);
-    await delay(400); // small settle time in case of client-side render
-    const results = await extractGoogleResults(tabId);
-    if (!results.length) throw Object.assign(new Error('no organic result found'), {stage:'search'});
+    const primary = ENGINES[primaryEngine] ? primaryEngine : 'google';
+    const fallback = primary === 'google' ? 'duckduckgo' : 'google';
+
+    let { results, blocked } = await runSearchEngine(tabId, primary, q);
+    if (blocked || !results.length){
+      notify({url: null, imageUrl: null, note: `${primary} ${blocked ? 'appears blocked/CAPTCHA\'d' : 'returned no results'} — falling back to ${fallback}`});
+      const retry = await runSearchEngine(tabId, fallback, q);
+      results = retry.results;
+    }
+    if (!results.length) throw Object.assign(new Error('no organic result found on ' + primary + ' or ' + fallback), {stage:'search'});
 
     const ranked = rankResults(searchTitle, results);
     const brand = brandToken(searchTitle);
@@ -497,6 +569,7 @@
 
     const maxPerZip = getZipSize();
     const laneCount = Math.min(getLaneCount(), selected.length);
+    const primaryEngine = getPrimaryEngine();
     cancelled = false;
     startBtn.disabled = true;
     cancelBtn.style.display = 'inline-block';
@@ -531,7 +604,7 @@
           const {imageUrl, pageUrl} = await searchAndFetch(tab.id, item.title, ({url, imageUrl, note}) => {
             if (note) logLine('  ' + note);
             else logLine('  visited ' + url + '  →  image: ' + (imageUrl || 'none found'));
-          });
+          }, primaryEngine);
           setLaneStatus(laneIndex, 'Fetching image for: ' + item.title);
           const {res, ctype} = await fetchImage(imageUrl);
           const blob = await res.blob();

@@ -199,11 +199,11 @@
     <h1>Search &amp; Fetch by Title</h1>
     <a href="app.html" style="margin-left:auto;font-size:0.85rem;font-weight:600;color:var(--accent);text-decoration:none;">📄 Batch download from sheet →</a>
   </div>
-  <p class="sub">Upload a spreadsheet with just a title column. For each title, this opens 5 Chrome tabs that Google-search it (storage/RAM capacity like "128GB" is ignored for searching and matching, but kept in the saved filename), ranks the non-sponsored organic results by title match, and restricts them to the brand's official site or Amazon when one is found (falling back to other results otherwise). It visits candidates in order until one yields a product image (checked via structured Product data, then og:image, then the largest image on the page — generic logos/placeholders are filtered out) — then zips everything up.</p>
+  <p class="sub">Upload a spreadsheet with just a title column. For each title, this opens 5 Chrome tabs that search it on your chosen engine (storage/RAM capacity like "128GB" is ignored for searching and matching, but kept in the saved filename), ranks the non-sponsored organic results by title match, and restricts them to the brand's official site or Amazon when one is found (falling back to other results otherwise). It visits candidates in order until one yields a product image (checked via structured Product data, then og:image, then the largest image on the page — generic logos/placeholders are filtered out) — then zips everything up.</p>
 
   <div class="warn-box">
     <div class="wico">⚠️</div>
-    <div>This automates real Google searches in visible tabs — it can trip Google's bot detection (a CAPTCHA in one of the tabs) on large sheets. If that happens, solve it in that tab and the search will keep going, or cancel and re-run the remaining rows. Small randomized delays are added between searches to reduce this.</div>
+    <div>This automates real searches in visible tabs — Google in particular can trip its bot detection (a CAPTCHA in one of the tabs) on large sheets. If a title's chosen engine returns nothing or looks blocked, it automatically retries on the other engine (Google ⇄ DuckDuckGo) before giving up. If you do land on a CAPTCHA, solve it in that tab and the search will keep going, or cancel and re-run the remaining rows. Small randomized delays are added between searches to reduce this.</div>
   </div>
 
   <div class="panel">
@@ -231,6 +231,14 @@
         <label for="laneCount">Parallel tabs</label>
         <input type="number" id="laneCount" min="1" max="5" value="5">
         <span class="fieldhint">Chrome tabs searching at once</span>
+      </div>
+      <div class="field">
+        <label for="searchEngine">Search engine</label>
+        <select id="searchEngine">
+          <option value="google">Google</option>
+          <option value="duckduckgo">DuckDuckGo</option>
+        </select>
+        <span class="fieldhint">Falls back to the other if this one is blocked/empty</span>
       </div>
     </div>
 
