@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Image Batch Downloader",
   "description": "Download images in bulk from a spreadsheet of titles and URLs, straight to a ZIP — no CORS proxy needed.",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyJ0X8q+m8SOB6ZvvWcPrpdwaPzKdCgvd7HO/rJX4U8ZxUEfp/Bubr8KCA5ohcyX3hs1pXJhhUfujOwdgJl9JCU5ydpBdjktZe0esUD9g2/Qbg98aSU8EpNtqxKcZzRWSZ2HQudBV2S0DV84Ts0jMxHOhPdRPTutoCefwZv8BkNf7FZ2mjcCvSJM005Ol/xZFyqgWPeZmHXVghViSrk7PMKBxrvnsTpl3yNjpuYm0q/bbK3fflDMlDAlQYHpjXqR4kUrhS/DAVQyE0dQ77WMwAqFXHGYDuWl2rf6OPJgt8e0h7S81Utp47+/Xwlnt9zWQP/VdfhpRpDwH/hp1bIBsVwIDAQAB",
   "icons": {
     "16": "icons/icon16.png",

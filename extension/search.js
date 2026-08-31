@@ -245,6 +245,13 @@
       target: {tabId},
       func: function(){
         function abs(u){ try { return new URL(u, document.baseURI).href; } catch(e){ return null; } }
+        // Some sites (e.g. mi.com) reuse a generic brand logo/share image for
+        // og:image/twitter:image on every page — reject those instead of
+        // trusting the meta tag blindly.
+        const LOGO_RE = /(^|[\/._-])(logo|favicon|sprite|icon|apple-touch|og-default|default[-_]?share|placeholder|no[-_]?image|noimage|social[-_]?share|share[-_]?image)([\/._-]|$)/i;
+        function looksLikeLogo(url){
+          try { return LOGO_RE.test(new URL(url).pathname); } catch(e){ return LOGO_RE.test(url); }
+        }
         const metaSelectors = [
           'meta[property="og:image:secure_url"]',
           'meta[property="og:image"]',
@@ -256,7 +263,7 @@
         for (const sel of metaSelectors){
           const el = document.querySelector(sel);
           const content = el && el.getAttribute('content');
-          if (content){
+          if (content && !looksLikeLogo(content)){
             const url = abs(content);
             if (url) return url;
           }
@@ -267,7 +274,7 @@
           const w = img.naturalWidth || rect.width;
           const h = img.naturalHeight || rect.height;
           const area = w * h;
-          if (area > bestArea && w > 80 && h > 80 && img.src){
+          if (area > bestArea && w > 80 && h > 80 && img.src && !looksLikeLogo(img.src)){
             bestArea = area;
             best = img.src;
           }
