@@ -69,6 +69,15 @@ knowing before you run it:
   command below instead.
 - This only affects your own Windows user account — no admin rights
   needed, and it won't touch anyone else who uses this computer.
+- **This only works on a managed PC** — one that's joined to a Windows
+  domain, or enrolled in Chrome Browser Cloud Management/MDM. Since
+  Chrome 75, that's a hard requirement for force-installing any extension
+  that isn't on the Chrome Web Store; on a regular, unmanaged home PC the
+  script runs fine and reports success, but Chrome quietly ignores the
+  policy and nothing appears in `chrome://extensions`. If that happens
+  to you, check `chrome://policy` for `ExtensionInstallForcelist` — if
+  it's not listed as applied there, this mechanism can't work on your
+  machine, and "Load unpacked" above is the way to go instead.
 
 To undo it later:
 

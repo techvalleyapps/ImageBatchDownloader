@@ -23,6 +23,14 @@
   twice is safe — it detects our entry is already present and does nothing.
 
   Scope: HKCU (current Windows user only) — no admin rights needed.
+
+  IMPORTANT CAVEAT: since Chrome 75, ExtensionInstallForcelist only
+  force-installs extensions that aren't on the Chrome Web Store (like this
+  one) if the machine is domain-joined (Active Directory) or enrolled in
+  Chrome Browser Cloud Management / MDM. On a normal, unmanaged Windows PC,
+  Chrome silently ignores this policy entry — the registry key gets written
+  successfully, but nothing shows up in chrome://extensions. This script
+  detects that case below and warns you instead of claiming success.
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -31,6 +39,37 @@ $ExtId     = 'mlglbiijpicamhlhddapgigojlfkgpmf'
 $UpdateUrl = 'https://raw.githubusercontent.com/techvalleyapps/ImageBatchDownloader/main/update.xml'
 $KeyPath   = 'HKCU:\SOFTWARE\Policies\Google\Chrome\ExtensionInstallForcelist'
 $EntryValue = "$ExtId;$UpdateUrl"
+
+function Test-ChromeManaged {
+    $domainJoined = $false
+    try {
+        $domainJoined = (Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction Stop).PartOfDomain
+    } catch { }
+
+    $cloudEnrolled = (Test-Path 'HKLM:\SOFTWARE\Policies\Google\Chrome\CloudManagementEnrollmentToken') -or
+                      (Test-Path 'HKLM:\SOFTWARE\Google\Chrome\CloudManagementEnrollmentToken') -or
+                      (Test-Path 'HKLM:\SOFTWARE\Policies\Google\Chrome\MachineLevelUserCloudPolicyEnrollmentToken')
+
+    return ($domainJoined -or $cloudEnrolled)
+}
+
+if (-not (Test-ChromeManaged)) {
+    Write-Host "WARNING: this machine doesn't look domain-joined or enrolled in" -ForegroundColor Yellow
+    Write-Host "Chrome Browser Cloud Management / MDM." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "Since Chrome 75, ExtensionInstallForcelist only force-installs" -ForegroundColor Yellow
+    Write-Host "extensions that aren't on the Chrome Web Store (like this one) on" -ForegroundColor Yellow
+    Write-Host "managed machines. On an unmanaged PC like this one, Chrome will" -ForegroundColor Yellow
+    Write-Host "likely WRITE the registry key below but IGNORE it — nothing will" -ForegroundColor Yellow
+    Write-Host "show up in chrome://extensions after restarting Chrome." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "This script will still set the key in case you know otherwise (e.g." -ForegroundColor Yellow
+    Write-Host "you're on a managed device this check didn't detect). To verify either" -ForegroundColor Yellow
+    Write-Host "way, restart Chrome and check chrome://policy for ExtensionInstallForcelist." -ForegroundColor Yellow
+    Write-Host "If it's not applied there, use 'Load unpacked' from the README instead" -ForegroundColor Yellow
+    Write-Host "-- this auto-update mechanism cannot work on this machine." -ForegroundColor Yellow
+    Write-Host ""
+}
 
 if (-not (Test-Path $KeyPath)) {
     New-Item -Path $KeyPath -Force | Out-Null
