@@ -253,6 +253,34 @@
         function looksLikeLogo(url){
           try { return LOGO_RE.test(new URL(url).pathname); } catch(e){ return LOGO_RE.test(url); }
         }
+
+        // Structured Product data (schema.org) is usually the most reliable
+        // source of the actual product photo — check it before meta tags.
+        function fromJsonLd(){
+          const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+          for (const s of scripts){
+            let data;
+            try { data = JSON.parse(s.textContent); } catch(e){ continue; }
+            const items = Array.isArray(data) ? data : (data && Array.isArray(data['@graph']) ? data['@graph'] : [data]);
+            for (const item of items){
+              if (!item || typeof item !== 'object') continue;
+              const type = item['@type'];
+              const isProduct = type === 'Product' || (Array.isArray(type) && type.includes('Product'));
+              if (!isProduct) continue;
+              let img = item.image;
+              if (Array.isArray(img)) img = img[0];
+              if (img && typeof img === 'object') img = img.url || img.contentUrl;
+              if (typeof img === 'string' && img && !looksLikeLogo(img)){
+                const url = abs(img);
+                if (url) return url;
+              }
+            }
+          }
+          return null;
+        }
+        const jsonLdImage = fromJsonLd();
+        if (jsonLdImage) return jsonLdImage;
+
         const metaSelectors = [
           'meta[property="og:image:secure_url"]',
           'meta[property="og:image"]',
@@ -286,29 +314,6 @@
     return (frames && frames[0] && frames[0].result) || null;
   }
 
-  async function findBuyNowLink(tabId){
-    const frames = await chrome.scripting.executeScript({
-      target: {tabId},
-      func: function(){
-        function abs(u){ try { return new URL(u, document.baseURI).href; } catch(e){ return null; } }
-        const BUY_RE = /\b(buy\s*(it)?\s*now|shop\s*now|order\s*now|add\s*to\s*cart|view\s*product|see\s*product)\b/i;
-        function textOf(el){
-          return ((el.getAttribute && (el.getAttribute('aria-label') || el.getAttribute('title'))) || '' ) + ' ' + (el.textContent || '') + ' ' + (el.value || '');
-        }
-        const candidates = document.querySelectorAll('a, button, [role="button"]');
-        for (const el of candidates){
-          const label = textOf(el).trim().replace(/\s+/g,' ');
-          if (!label || !BUY_RE.test(label)) continue;
-          if (el.tagName === 'A' && el.href) return abs(el.href);
-          const link = el.closest('a[href]');
-          if (link) return abs(link.href);
-        }
-        return null;
-      }
-    });
-    return (frames && frames[0] && frames[0].result) || null;
-  }
-
   function wordSet(s){
     return (s || '').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean);
   }
@@ -321,14 +326,11 @@
     b.forEach(w => { if (a.has(w) && !seen.has(w)){ hit++; seen.add(w); } });
     return hit / a.size;
   }
-  function pickBestResult(title, results){
-    if (!results.length) return null;
-    let best = results[0], bestScore = -1;
-    results.forEach(r => {
-      const score = similarity(title, (r.title || '') + ' ' + (r.snippet || ''));
-      if (score > bestScore){ bestScore = score; best = r; }
-    });
-    return best;
+  function rankResults(title, results){
+    return results
+      .map((r, i) => ({r, i, score: similarity(title, (r.title || '') + ' ' + (r.snippet || ''))}))
+      .sort((a, b) => b.score - a.score || a.i - b.i)
+      .map(x => x.r);
   }
 
   async function searchAndFetch(tabId, title, onVisit){
@@ -337,37 +339,27 @@
     await navigateAndWait(tabId, `https://www.google.com/search?q=${q}&num=10&hl=en`, 20000);
     await delay(400); // small settle time in case of client-side render
     const results = await extractGoogleResults(tabId);
-    const best = pickBestResult(title, results);
-    if (!best) throw Object.assign(new Error('no organic result found'), {stage:'search'});
+    if (!results.length) throw Object.assign(new Error('no organic result found'), {stage:'search'});
 
-    await navigateAndWait(tabId, best.href, 20000);
-    const landingImageUrl = await extractProductImage(tabId);
-    notify({url: best.href, imageUrl: landingImageUrl});
-    const buyUrl = await findBuyNowLink(tabId);
+    const ranked = rankResults(title, results);
+    let lastPageUrl = null;
 
-    let imageUrl = null;
-    let pageUrl = best.href;
-
-    if (buyUrl && buyUrl !== best.href){
-      // Prefer the Buy Now / Shop Now destination's image over the landing page's.
-      await navigateAndWait(tabId, buyUrl, 20000);
-      const buyImageUrl = await extractProductImage(tabId);
-      notify({url: buyUrl, imageUrl: buyImageUrl});
-      if (buyImageUrl){
-        imageUrl = buyImageUrl;
-        pageUrl = buyUrl;
+    for (const candidate of ranked){
+      let imageUrl;
+      try {
+        await navigateAndWait(tabId, candidate.href, 20000);
+        imageUrl = await extractProductImage(tabId);
+      } catch(err){
+        notify({url: candidate.href, imageUrl: null});
+        lastPageUrl = candidate.href;
+        continue;
       }
+      notify({url: candidate.href, imageUrl});
+      lastPageUrl = candidate.href;
+      if (imageUrl) return {imageUrl, pageUrl: candidate.href};
     }
 
-    if (!imageUrl && landingImageUrl){
-      // Fall back to the image already found on the original landing page.
-      imageUrl = landingImageUrl;
-      pageUrl = best.href;
-    }
-
-    if (!imageUrl) throw Object.assign(new Error('no product image found on ' + pageUrl), {stage:'image', pageUrl});
-
-    return {imageUrl, pageUrl};
+    throw Object.assign(new Error('no product image found on ' + (ranked.length > 1 ? `${ranked.length} candidate pages` : lastPageUrl)), {stage:'image', pageUrl: lastPageUrl});
   }
 
   // ---------- lane pool ----------
