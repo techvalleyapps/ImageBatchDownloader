@@ -11,8 +11,10 @@ extension, see [README.md](README.md) instead.
 extension/            The actual Chrome extension (MV3) — this is what
                        gets zipped/signed and shipped to users
   manifest.json
-  background.js        opens app.html in a tab on toolbar click
-  app.html / app.js     the tool itself
+  popup.html / popup.js toolbar click -> small popup, choose which tool to open
+  app.html / app.js     batch download from a sheet of title + image URL
+  search.html / search.js  search Google by title, grab the product image
+  common.js              shared fetch/zip/CSV helpers used by both tools
   lib/                  xlsx + JSZip, vendored locally (MV3 blocks
                          loading remote <script src>)
   icons/
