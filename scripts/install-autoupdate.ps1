@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   OPTIONAL: force-installs Image Batch Downloader via a Chrome policy
   registry key, so it installs silently and keeps itself updated forever

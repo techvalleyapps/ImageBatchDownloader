@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Maintainer-only: packs extension/ into a signed .crx and a plain .zip,
   ready to attach to a GitHub Release.

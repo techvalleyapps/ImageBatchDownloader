@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Reverts install-autoupdate.ps1 — removes only this extension's entry
   from the Chrome ExtensionInstallForcelist policy, leaving any other
