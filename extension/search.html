@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Image Batch Downloader</title>
+<title>Search & Fetch by Title — Image Batch Downloader</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -15,7 +15,7 @@
     --panel:#ffffff; --panel-2:#f7f7f9; --border:#e6e7ef; --border-soft:#eef0f6;
     --text:#171923; --muted:#6b7085; --muted-soft:#9497a8;
     --accent:#6d5bf5; --accent-2:#a855f7; --accent-hover:#5b48e8; --accent-bg:#f1eefe; --accent-ring:rgba(109,91,245,0.18);
-    --ok:#0f9d63; --ok-bg:#e7f8ef; --bad:#e0393e; --bad-bg:#fdecec; --warn:#b9770e;
+    --ok:#0f9d63; --ok-bg:#e7f8ef; --bad:#e0393e; --bad-bg:#fdecec; --warn:#b9770e; --warn-bg:#fdf3e2;
     --chip:#f0f1f6; --chip-active:#171923; --chip-active-text:#ffffff;
     --radius:16px; --radius-sm:10px;
     --shadow-sm:0 1px 2px rgba(23,25,35,0.04);
@@ -30,7 +30,7 @@
       --panel:#181a23; --panel-2:#1e2029; --border:#2a2d3a; --border-soft:#23252f;
       --text:#f1f2f6; --muted:#9296ab; --muted-soft:#6d7086;
       --accent:#8b7bff; --accent-2:#c084fc; --accent-hover:#a294ff; --accent-bg:#221f3d; --accent-ring:rgba(139,123,255,0.28);
-      --ok:#34d399; --ok-bg:#0f2b22; --bad:#f87171; --bad-bg:#2f1618; --warn:#fbbf24;
+      --ok:#34d399; --ok-bg:#0f2b22; --bad:#f87171; --bad-bg:#2f1618; --warn:#fbbf24; --warn-bg:#332508;
       --chip:#242631; --chip-active:#f1f2f6; --chip-active-text:#12131a;
       --shadow-sm:0 1px 2px rgba(0,0,0,0.3);
       --shadow-md:0 10px 30px -12px rgba(0,0,0,0.55);
@@ -92,14 +92,6 @@
     background:var(--panel-2);color:var(--text);font-family:inherit;transition:border-color .15s, box-shadow .15s;
   }
   .search:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring);}
-  .chip{
-    padding:7px 14px;border-radius:999px;background:var(--chip);border:1px solid transparent;
-    font-size:0.83rem;font-weight:500;cursor:pointer;white-space:nowrap;color:var(--text);user-select:none;
-    transition:background .15s, color .15s, transform .1s;
-  }
-  .chip:hover{transform:translateY(-1px);}
-  .chip.active{background:var(--chip-active);color:var(--chip-active-text);}
-  .chip .count{opacity:0.6;margin-left:5px;}
 
   .rowbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:0.83rem;color:var(--muted);}
   .rowbar a{color:var(--accent);cursor:pointer;text-decoration:none;font-weight:600;}
@@ -115,13 +107,14 @@
   tbody tr:hover{background:var(--panel-2);}
   tbody tr.excluded{opacity:0.4;}
   .ttitle{font-weight:500;}
-  .turl{color:var(--muted-soft);font-size:0.77rem;word-break:break-all;max-width:320px;display:block;margin-top:2px;}
+  .tsub{color:var(--muted-soft);font-size:0.77rem;word-break:break-all;max-width:320px;display:block;margin-top:2px;}
   .badge{
     display:inline-block;padding:3px 9px;border-radius:999px;font-size:0.71rem;font-weight:600;
   }
-  .badge.domain{background:var(--chip);color:var(--text);}
-  .badge.direct{background:var(--ok-bg);color:var(--ok);}
-  .badge.manual{background:var(--bad-bg);color:var(--bad);}
+  .badge.pending{background:var(--chip);color:var(--muted);}
+  .badge.working{background:var(--accent-bg);color:var(--accent);}
+  .badge.found{background:var(--ok-bg);color:var(--ok);}
+  .badge.notfound{background:var(--bad-bg);color:var(--bad);}
   input[type=checkbox]{
     width:17px;height:17px;cursor:pointer;accent-color:var(--accent);border-radius:4px;
   }
@@ -143,6 +136,14 @@
   button.primary:hover:not(:disabled){transform:translateY(-1px);}
   button.primary:active:not(:disabled){transform:translateY(0);}
   button.primary:disabled{background:var(--chip);color:var(--muted-soft);box-shadow:none;cursor:not-allowed;}
+
+  .lanes{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:14px;}
+  .lane{
+    background:var(--panel-2);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:9px 12px;font-size:0.77rem;color:var(--muted);
+  }
+  .lane b{display:block;color:var(--text);font-size:0.71rem;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:3px;}
+  .lane span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
   .progress-wrap{margin-top:18px;display:none;}
   .progress-wrap.show{display:block;}
@@ -180,24 +181,35 @@
   }
   button.secondary:hover{background:var(--border);}
 
+  .warn-box{
+    display:flex;gap:10px;align-items:flex-start;background:var(--warn-bg);border:1px solid transparent;
+    border-radius:var(--radius-sm);padding:12px 16px;font-size:0.82rem;color:var(--text);line-height:1.55;margin-bottom:20px;
+  }
+  .warn-box .wico{flex:none;}
+
   footer{text-align:center;color:var(--muted-soft);font-size:0.78rem;margin-top:36px;}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="hero">
-    <div class="hero-icon">🖼️</div>
-    <h1>Image Batch Downloader</h1>
-    <a href="search.html" style="margin-left:auto;font-size:0.85rem;font-weight:600;color:var(--accent);text-decoration:none;">🔎 Search &amp; fetch by title →</a>
+    <div class="hero-icon">🔎</div>
+    <h1>Search &amp; Fetch by Title</h1>
+    <a href="app.html" style="margin-left:auto;font-size:0.85rem;font-weight:600;color:var(--accent);text-decoration:none;">📄 Batch download from sheet →</a>
   </div>
-  <p class="sub">Upload a spreadsheet with a title column and an image/link URL column — any header names work, you pick which columns to use. Choose how many images go in each ZIP, pick which rows you want, grouped by domain, and download. As an extension, image fetches bypass CORS entirely — no unlocking proxy needed, even for hosts that block every public proxy.</p>
+  <p class="sub">Upload a spreadsheet with just a title column. For each title, this opens 5 Chrome tabs that Google-search it, pick the best-matching non-sponsored organic result from the top 3, open it, and grab the product image (og:image, falling back to the largest image on the page) — then zips everything up.</p>
+
+  <div class="warn-box">
+    <div class="wico">⚠️</div>
+    <div>This automates real Google searches in visible tabs — it can trip Google's bot detection (a CAPTCHA in one of the tabs) on large sheets. If that happens, solve it in that tab and the search will keep going, or cancel and re-run the remaining rows. Small randomized delays are added between searches to reduce this.</div>
+  </div>
 
   <div class="panel">
     <div class="drop" id="drop">
       <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
       <div class="icon">📄</div>
       <div><strong>Click to choose a file</strong> or drag it here</div>
-      <div class="hint">.xlsx, .xls, or .csv — any columns, you'll map them next</div>
+      <div class="hint">.xlsx, .xls, or .csv — pick the title column next</div>
       <div class="filename" id="filename"></div>
     </div>
   </div>
@@ -209,19 +221,19 @@
         <select id="titleCol"></select>
       </div>
       <div class="field">
-        <label for="urlCol">Image URL column</label>
-        <select id="urlCol"></select>
-      </div>
-      <div class="field">
         <label for="zipSizeInput">Items per ZIP</label>
         <input type="number" id="zipSizeInput" min="1" max="2000" value="100">
         <span class="fieldhint">Splits large selections into multiple ZIPs</span>
       </div>
+      <div class="field">
+        <label for="laneCount">Parallel tabs</label>
+        <input type="number" id="laneCount" min="1" max="5" value="5">
+        <span class="fieldhint">Chrome tabs searching at once</span>
+      </div>
     </div>
 
     <div class="toolbar">
-      <input class="search" id="search" type="text" placeholder="Filter by title or URL…">
-      <div id="domainChips" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+      <input class="search" id="search" type="text" placeholder="Filter by title…">
     </div>
     <div class="rowbar">
       <span id="rowCount"></span>
@@ -233,8 +245,7 @@
           <tr>
             <th style="width:34px;"></th>
             <th>Title</th>
-            <th style="width:120px;">Domain</th>
-            <th style="width:110px;">Type</th>
+            <th style="width:150px;">Status</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -245,11 +256,12 @@
       <div class="selected-count"><b id="selCount">0</b> of <span id="totalCount">0</span> selected</div>
       <div style="display:flex;gap:10px;align-items:center;">
         <button class="secondary" id="cancelBtn" style="display:none;">Cancel</button>
-        <button class="primary" id="downloadBtn" disabled>Download ZIP of selected</button>
+        <button class="primary" id="startBtn" disabled>Search &amp; build ZIP</button>
       </div>
     </div>
 
     <div class="progress-wrap" id="progressWrap">
+      <div class="lanes" id="lanes"></div>
       <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
       <div class="progress-label" id="progressLabel"></div>
       <div class="log" id="log"></div>
@@ -258,20 +270,20 @@
     <div class="results" id="results">
       <div class="result-stats">
         <div class="stat okstat"><div class="n" id="okN">0</div><div class="l">Images downloaded</div></div>
-        <div class="stat badstat"><div class="n" id="badN">0</div><div class="l">Couldn't fetch</div></div>
+        <div class="stat badstat"><div class="n" id="badN">0</div><div class="l">Not found / failed</div></div>
       </div>
       <div class="note" id="failNote" style="display:none;"></div>
       <div class="manual-actions" id="manualActions" style="display:none;">
-        <button class="secondary" id="viewFailBtn" type="button">Open failed-links page ↗</button>
-        <button class="secondary" id="downloadCsvBtn" type="button">Download failed links as CSV</button>
+        <button class="secondary" id="viewFailBtn" type="button">Open failed-titles page ↗</button>
+        <button class="secondary" id="downloadCsvBtn" type="button">Download failed titles as CSV</button>
       </div>
     </div>
   </div>
 
-  <footer>Runs entirely inside the extension — files never leave your machine, and no proxy service ever sees a URL.</footer>
+  <footer>Runs entirely inside the extension — files never leave your machine. Google search parsing is best-effort and may need updates if Google changes its results page layout.</footer>
 </div>
 
 <script src="common.js"></script>
-<script src="app.js"></script>
+<script src="search.js"></script>
 </body>
 </html>
