@@ -337,6 +337,21 @@
         const jsonLdImage = fromJsonLd();
         if (jsonLdImage) return jsonLdImage;
 
+        // Amazon (and similarly-templated storefronts) have no og:image, so
+        // the old fallback fell straight to "largest image on the page" —
+        // which can land on a customer-review or Q&A thumbnail instead of
+        // the actual listing photo. Check the known main-image slot first.
+        const mainImageSelectors = [
+          '#landingImage',
+          '#imgBlkFront',
+          '#main-image',
+          '#imgTagWrapperId img'
+        ];
+        for (const sel of mainImageSelectors){
+          const el = document.querySelector(sel);
+          if (el && el.src && !looksLikeLogo(el.src)) return abs(el.src);
+        }
+
         const metaSelectors = [
           'meta[property="og:image:secure_url"]',
           'meta[property="og:image"]',
