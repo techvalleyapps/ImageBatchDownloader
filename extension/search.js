@@ -36,6 +36,8 @@
   const zipSizeInput = document.getElementById('zipSizeInput');
   const laneCountInput = document.getElementById('laneCount');
   const searchEngineEl = document.getElementById('searchEngine');
+  const restrictOfficialEl = document.getElementById('restrictOfficial');
+  const restrictAmazonEl = document.getElementById('restrictAmazon');
 
   let cancelled = false;
   let lastFailures = [];
@@ -181,6 +183,12 @@
   }
   function getPrimaryEngine(){
     return searchEngineEl.value === 'duckduckgo' ? 'duckduckgo' : 'google';
+  }
+  function getRestrictOfficial(){
+    return !!restrictOfficialEl.checked;
+  }
+  function getRestrictAmazon(){
+    return !!restrictAmazonEl.checked;
   }
 
   function delay(ms){ return new Promise(r => setTimeout(r, ms)); }
@@ -480,14 +488,20 @@
     return /(^|\.)amazon\.[a-z.]+$/i.test(hostname);
   }
 
-  function isOfficialOrAmazon(url, brand){
+  function isOfficial(url, brand){
     const hostname = hostnameOf(url);
-    if (!hostname) return false;
-    if (isAmazon(hostname)) return true;
-    if (!brand) return false;
+    if (!hostname || !brand) return false;
     const mapped = BRAND_DOMAIN_MAP[brand];
     if (mapped) return mapped.some(d => hostname === d || hostname.endsWith('.' + d));
     return hostname.includes(brand);
+  }
+
+  function matchesRestriction(url, brand, restrictOfficial, restrictAmazon){
+    const hostname = hostnameOf(url);
+    if (!hostname) return false;
+    if (restrictAmazon && isAmazon(hostname)) return true;
+    if (restrictOfficial && isOfficial(url, brand)) return true;
+    return false;
   }
 
   async function runSearchEngine(tabId, engineName, query){
@@ -500,7 +514,7 @@
     return {results, blocked: false};
   }
 
-  async function searchAndFetch(tabId, title, onVisit, primaryEngine){
+  async function searchAndFetch(tabId, title, onVisit, primaryEngine, restrictOfficial, restrictAmazon){
     const notify = typeof onVisit === 'function' ? onVisit : () => {};
     // Search/match on the title with storage/RAM capacity stripped (e.g.
     // "128GB") — it rarely appears on the product page and only hurts
@@ -521,13 +535,17 @@
 
     const ranked = rankResults(searchTitle, results);
     const brand = brandToken(searchTitle);
-    const officialOnly = ranked.filter(r => isOfficialOrAmazon(r.href, brand));
-    if (officialOnly.length){
-      notify({url: null, imageUrl: null, note: `restricting to official/Amazon results: ${officialOnly.map(r => hostnameOf(r.href)).join(', ')}`});
-    } else {
-      notify({url: null, imageUrl: null, note: 'no official/Amazon result in top candidates — falling back to other results'});
+    let candidates = ranked;
+    if (restrictOfficial || restrictAmazon){
+      const label = restrictOfficial && restrictAmazon ? 'official/Amazon' : (restrictOfficial ? 'official' : 'Amazon');
+      const restricted = ranked.filter(r => matchesRestriction(r.href, brand, restrictOfficial, restrictAmazon));
+      if (restricted.length){
+        notify({url: null, imageUrl: null, note: `restricting to ${label} results: ${restricted.map(r => hostnameOf(r.href)).join(', ')}`});
+        candidates = restricted;
+      } else {
+        notify({url: null, imageUrl: null, note: `no ${label} result in top candidates — falling back to other results`});
+      }
     }
-    const candidates = officialOnly.length ? officialOnly : ranked;
     let lastPageUrl = null;
 
     for (const candidate of candidates){
@@ -585,6 +603,8 @@
     const maxPerZip = getZipSize();
     const laneCount = Math.min(getLaneCount(), selected.length);
     const primaryEngine = getPrimaryEngine();
+    const restrictOfficial = getRestrictOfficial();
+    const restrictAmazon = getRestrictAmazon();
     cancelled = false;
     startBtn.disabled = true;
     cancelBtn.style.display = 'inline-block';
@@ -619,7 +639,7 @@
           const {imageUrl, pageUrl} = await searchAndFetch(tab.id, item.title, ({url, imageUrl, note}) => {
             if (note) logLine('  ' + note);
             else logLine('  visited ' + url + '  →  image: ' + (imageUrl || 'none found'));
-          }, primaryEngine);
+          }, primaryEngine, restrictOfficial, restrictAmazon);
           setLaneStatus(laneIndex, 'Fetching image for: ' + item.title);
           const {res, ctype} = await fetchImage(imageUrl);
           const blob = await res.blob();

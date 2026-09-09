@@ -199,7 +199,7 @@
     <h1>Search &amp; Fetch by Title</h1>
     <a href="app.html" style="margin-left:auto;font-size:0.85rem;font-weight:600;color:var(--accent);text-decoration:none;">📄 Batch download from sheet →</a>
   </div>
-  <p class="sub">Upload a spreadsheet with just a title column. For each title, this opens 5 Chrome tabs that search it on your chosen engine (storage/RAM capacity like "128GB" is ignored for searching and matching, but kept in the saved filename), ranks the non-sponsored organic results by title match, and restricts them to the brand's official site or Amazon when one is found (falling back to other results otherwise). It visits candidates in order until one yields a product image (checked via structured Product data, then og:image, then the largest image on the page — generic logos/placeholders are filtered out) — then zips everything up.</p>
+  <p class="sub">Upload a spreadsheet with just a title column. For each title, this opens 5 Chrome tabs that search it on your chosen engine (storage/RAM capacity like "128GB" is ignored for searching and matching, but kept in the saved filename), ranks the non-sponsored organic results by title match, and (per the checkboxes below) restricts them to the brand's official site and/or Amazon when one is found (falling back to other results otherwise, or skipping restriction entirely if both are unticked). It visits candidates in order until one yields a product image (checked via structured Product data, then og:image, then the largest image on the page — generic logos/placeholders are filtered out) — then zips everything up.</p>
 
   <div class="warn-box">
     <div class="wico">⚠️</div>
@@ -239,6 +239,18 @@
           <option value="duckduckgo">DuckDuckGo</option>
         </select>
         <span class="fieldhint">Falls back to the other if this one is blocked/empty</span>
+      </div>
+      <div class="field">
+        <label>Restrict results to</label>
+        <div style="display:flex;gap:14px;align-items:center;padding:9px 0;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;font-weight:500;cursor:pointer;">
+            <input type="checkbox" id="restrictOfficial" checked> Official site
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;font-weight:500;cursor:pointer;">
+            <input type="checkbox" id="restrictAmazon" checked> Amazon
+          </label>
+        </div>
+        <span class="fieldhint">Untick to allow other sites when none of these match</span>
       </div>
     </div>
 
