@@ -43,3 +43,9 @@ dist/
 signing-key.pem
 *.crx
 release/
+
+# Local AI tooling files
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+.mcp.json
